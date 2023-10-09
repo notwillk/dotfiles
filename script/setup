@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+DOTFILES_DIR=$SCRIPT_DIR/../.dotfiles
+
+function red {
+    RED='\033[0;31m'
+    RESET_COLOR='\033[0m'
+    printf "${RED}$@${RESET_COLOR}\n"
+}
+
+function green {
+    GREEN='\033[0;32m'
+    RESET_COLOR='\033[0m'
+    printf "${GREEN}$@${RESET_COLOR}\n"
+}
+
+function yellow {
+    YELLOW='\033[0;33m'
+    RESET_COLOR='\033[0m'
+    printf "${YELLOW}$@${RESET_COLOR}\n"
+}
+
+echo $(green "Confirming python3...")
+if [[ `which python3` = "" ]]; then
+    echo $(red "python3 is not in the path!")
+    exit 1
+fi
+
+if [[ `which ansible-playbook` = "" ]]; then
+    echo $(green "Downloading ansible and running playbook...")
+    python3 $DOTFILES_DIR/assets/pipx.pyz run --spec ansible ansible-playbook --connection=local $DOTFILES_DIR/playbooks/index.yml
+else
+    echo $(yellow "Skipped ansible installation")
+    echo $(green "Running ansible playbook...")
+    ansible-playbook --connection=local $DOTFILES_DIR/playbooks/index.yml
+fi
+
+echo $(green "Done.")
