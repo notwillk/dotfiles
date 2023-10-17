@@ -3,3 +3,22 @@
     name: transmission
     state: present
   when: ansible_distribution == 'MacOSX'
+# - name: Set Transmission settings
+#   osx_defaults: domain=org.m0k.transmission key={{ item.key }} type={{ item.type }} value={{ item.value }}
+#   with_items:
+#     # Don’t prompt for confirmation before downloading
+#     - { key: "DownloadAsk", type: "bool", value: "false" }
+#     # Trash original torrent files
+#     - { key: "DeleteOriginalTorrent", type: "bool", value: "true" }
+#     # Hide the donate message
+#     - { key: "WarningDonate", type: "bool", value: "false" }
+#     # Hide the legal disclaimer
+#     - { key: "WarningLegal", type: "bool", value: "false" }
+#     - { key: "EncryptionRequire", type: "bool", value: "true" }
+#     # Setting up block list
+#     - { key: "BlocklistAutoUpdate", type: "bool", value: "true" }
+#     - { key: "BlocklistURL", type: "string", value: "http://john.bitsurge.net/public/biglist.p2p.gz" }
+#     # Auto-resizing the window to fit transfers
+#     - { key: "AutoSize", type: "bool", value: "true" }
+#   notify:
+#     - Kill Transmission

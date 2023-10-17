@@ -6,23 +6,23 @@ set -e
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 DOTFILES_DIR=$SCRIPT_DIR/../.dotfiles
 
-trap cleanup EXIT
-
-function cleanup {
+cleanup() {
     exit_code=$?
     if [[ ${exit_code} -eq 0 ]]; then
-        if command -v terminal-notifier 1>/dev/null 2>&1; then
-            terminal-notifier -title "Dotfiles: setup complete" -message "Successfully set up environment." -appIcon "$SCRIPT_DIR/../.dotfiles/assets/robot_emoji.png"
+        if [[ `which terminal-notifier` != "" ]]; then
+            terminal-notifier -title "Dotfiles: setup complete" -message "Successfully set up environment." -appIcon "file://$SCRIPT_DIR/../.dotfiles/assets/robot_emoji.png"
         fi
-        echo $(green "Done.")
+        echo $(green "Successfully set up environment.")
     else
-        if command -v terminal-notifier 1>/dev/null 2>&1; then
-            terminal-notifier -title "Dotfiles: error" -message "Error setting up environment." -appIcon "$SCRIPT_DIR/../.dotfiles/assets/robot_emoji.png"
+        if [[ `which terminal-notifier` != "" ]]; then
+            terminal-notifier -title "Dotfiles: error" -message "Error setting up environment." -appIcon "file://$SCRIPT_DIR/../.dotfiles/assets/robot_emoji.png"
         fi
 
-        echo $(green "Error.")
+        echo $(red "Error setting up environment")
     fi
 }
+
+trap cleanup EXIT
 
 function red {
     RED='\033[0;31m'
