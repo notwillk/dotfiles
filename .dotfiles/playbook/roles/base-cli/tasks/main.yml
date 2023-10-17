@@ -1,0 +1,73 @@
+- name: Install awk
+  ansible.builtin.package:
+    name: awk
+    state: present
+- name: Install grep
+  ansible.builtin.package:
+    name: grep
+    state: present
+- name: Install gpg
+  ansible.builtin.package:
+    name: gpg
+    state: present
+- name: Install bash-completion
+  ansible.builtin.package:
+    name: bash-completion
+    state: present
+- name: Install jq
+  ansible.builtin.package:
+    name: jq
+    state: present
+- name: Install doitlive
+  ansible.builtin.package:
+    name: doitlive
+    state: present
+- name: Install tmux
+  ansible.builtin.package:
+    name: tmux
+    state: present
+- name: Install youtube-dl
+  ansible.builtin.package:
+    name: youtube-dl
+    state: present
+- name: Install rsvg-convert
+  ansible.builtin.package:
+    name: librsvg
+    state: present
+- name: Install qrencode
+  ansible.builtin.package:
+    name: qrencode
+    state: present
+- name: Install mitmproxy
+  ansible.builtin.package:
+    name: mitmproxy
+    state: present
+- name: Install lazygit
+  ansible.builtin.package:
+    name: lazygit
+    state: present
+- name: Install netcat
+  ansible.builtin.package:
+    name: netcat
+    state: present
+- name: Install tree
+  ansible.builtin.package:
+    name: tree
+    state: present
+- name: Install vim
+  ansible.builtin.package:
+    name: vim
+    state: present
+- name: Install watch
+  ansible.builtin.package:
+    name: watch
+    state: present
+- name: Install whois
+  ansible.builtin.package:
+    name: whois
+    state: present
+- name: Install zzz
+  ansible.builtin.package:
+    name: zzz
+    state: present
+  when: ansible_distribution == 'MacOSX'

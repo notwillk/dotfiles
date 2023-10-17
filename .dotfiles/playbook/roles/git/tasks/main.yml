@@ -1,0 +1,9 @@
+- name: Checking for git
+  command: which git
+  register: result
+  changed_when: False
+- name: Install git
+  ansible.builtin.package:
+    name: git
+    state: present
+  when: result.stdout == ""

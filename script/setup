@@ -1,7 +1,28 @@
 #!/usr/bin/env bash
 
+# Exit if command fails
+set -e
+
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 DOTFILES_DIR=$SCRIPT_DIR/../.dotfiles
+
+trap cleanup EXIT
+
+function cleanup {
+    exit_code=$?
+    if [[ ${exit_code} -eq 0 ]]; then
+        if command -v terminal-notifier 1>/dev/null 2>&1; then
+            terminal-notifier -title "Dotfiles: setup complete" -message "Successfully set up environment." -appIcon "$SCRIPT_DIR/../.dotfiles/assets/robot_emoji.png"
+        fi
+        echo $(green "Done.")
+    else
+        if command -v terminal-notifier 1>/dev/null 2>&1; then
+            terminal-notifier -title "Dotfiles: error" -message "Error setting up environment." -appIcon "$SCRIPT_DIR/../.dotfiles/assets/robot_emoji.png"
+        fi
+
+        echo $(green "Error.")
+    fi
+}
 
 function red {
     RED='\033[0;31m'
@@ -29,11 +50,9 @@ fi
 
 if [[ `which ansible-playbook` = "" ]]; then
     echo $(green "Downloading ansible and running playbook...")
-    python3 $DOTFILES_DIR/assets/pipx.pyz run --spec ansible ansible-playbook --connection=local $DOTFILES_DIR/playbooks/index.yml
+    python3 $DOTFILES_DIR/assets/pipx.pyz run --spec ansible ansible-playbook --connection=local -i $DOTFILES_DIR/playbook/hosts $DOTFILES_DIR/playbook/main.yml
 else
     echo $(yellow "Skipped ansible installation")
     echo $(green "Running ansible playbook...")
-    ansible-playbook --connection=local $DOTFILES_DIR/playbooks/index.yml
+    ansible-playbook --connection=local -i $DOTFILES_DIR/playbook/hosts $DOTFILES_DIR/playbook/main.yml
 fi
-
-echo $(green "Done.")

@@ -1,0 +1,5 @@
+- name: Install whatsapp
+  community.general.homebrew_cask:
+    name: whatsapp
+    state: present
+  when: ansible_distribution == 'MacOSX'

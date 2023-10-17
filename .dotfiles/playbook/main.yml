@@ -1,0 +1,73 @@
+---
+- name: Bootstrap
+  hosts: 127.0.0.1
+  connection: local
+  become: false
+
+  roles:
+    - ansible
+    - git
+    - mas
+    - pipx
+    - ssh
+    - wget
+
+- name: Base
+  hosts: 127.0.0.1
+  connection: local
+
+  roles:
+    - emojipedia
+    - github
+    - killport
+    - pass
+    - terminal-notifier
+    - sf-symbols
+    - base-cli
+
+- name: Fun
+  hosts: 127.0.0.1
+  connection: local
+  roles:
+    - fun-cli
+    - jellyfin-media-player
+    - plex-media-player
+    - windows95
+
+- name: UI applications
+  hosts: 127.0.0.1
+  connection: local
+
+  roles:
+    - 1password
+    - adobe-creative-cloud
+    - autodesk-fusion360
+    - chrome
+    - cyberduck
+    - discord
+    - discovery
+    - dropbox
+    - handbrake
+    - keybase
+    - notion
+    - makemkv
+    - obsidian
+    - postman
+    - raspberry-pi-imager
+    - slack
+    - signal
+    - telegram
+    - transmission
+    - visual-studio-code
+    - vlc
+    - whatsapp
+    - wireshark
+    - zoom
+
+- name: VPN applications
+  hosts: 127.0.0.1
+  connection: local
+
+  roles:
+    - private-internet-access
+    - twingate

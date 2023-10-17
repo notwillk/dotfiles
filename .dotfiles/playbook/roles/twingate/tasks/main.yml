@@ -1,0 +1,5 @@
+- name: Install twingate
+  community.general.mas:
+    id: 1501592214  # Twingate     
+    state: present
+  when: ansible_distribution == 'MacOSX'

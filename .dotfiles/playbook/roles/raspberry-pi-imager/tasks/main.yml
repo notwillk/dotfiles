@@ -1,0 +1,5 @@
+- name: Install raspberry-pi-imager
+  community.general.homebrew_cask:
+    name: raspberry-pi-imager
+    state: present
+  when: ansible_distribution == 'MacOSX'

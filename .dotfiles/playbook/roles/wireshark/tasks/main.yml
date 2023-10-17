@@ -1,0 +1,6 @@
+- name: Install wireshark
+  become: false
+  community.general.homebrew_cask:
+    name: wireshark
+    state: present
+  when: ansible_distribution == 'MacOSX'

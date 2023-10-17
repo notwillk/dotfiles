@@ -1,0 +1,5 @@
+- name: Install dropbox
+  community.general.homebrew_cask:
+    name: dropbox
+    state: present
+  when: ansible_distribution == 'MacOSX'

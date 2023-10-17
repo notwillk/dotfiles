@@ -1,0 +1,5 @@
+- name: Install windows95
+  community.general.homebrew_cask:
+    name: windows95
+    state: present
+  when: ansible_distribution == 'MacOSX'

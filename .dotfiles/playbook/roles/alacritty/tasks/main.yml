@@ -1,0 +1,5 @@
+- name: Install alacritty
+  community.general.homebrew_cask:
+    name: alacritty
+    state: present
+  when: ansible_distribution == 'MacOSX'

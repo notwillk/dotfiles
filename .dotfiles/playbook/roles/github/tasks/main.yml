@@ -1,0 +1,30 @@
+- name: Install gh
+  ansible.builtin.package:
+    name: gh
+    state: present
+
+- name: Create repos directory
+  ansible.builtin.file:
+      path: "~/repos/github.com/notwillk"
+      state: directory
+      mode: '0755'
+
+- name: Create github ssh directory
+  ansible.builtin.file:
+      path: "~/.ssh/hosts/github.com"
+      state: directory
+      mode: '0755'
+
+- name: Generate SSH key for github.com
+  community.crypto.openssh_keypair:
+    path: "~/.ssh/hosts/github.com/id_ed25519"
+    type: ed25519
+    state: present
+    comment: william@klancnik.com
+    force: no
+
+- name: Install github
+  community.general.homebrew_cask:
+    name: github
+    state: present
+  when: ansible_distribution == 'MacOSX'

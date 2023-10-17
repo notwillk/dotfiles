@@ -1,0 +1,6 @@
+- name: Install adobe-creative-cloud
+  become: false
+  community.general.homebrew_cask:
+    name: adobe-creative-cloud
+    state: present
+  when: ansible_distribution == 'MacOSX'

@@ -1,0 +1,5 @@
+- name: Install makemkv
+  community.general.homebrew_cask:
+    name: makemkv
+    state: present
+  when: ansible_distribution == 'MacOSX'

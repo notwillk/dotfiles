@@ -1,0 +1,5 @@
+- name: Install plex-media-player
+  community.general.homebrew_cask:
+    name: plex-media-player
+    state: present
+  when: ansible_distribution == 'MacOSX'

@@ -1,0 +1,5 @@
+- name: Install private internet access
+  community.general.homebrew_cask:
+    name: private-internet-access
+    state: present
+  when: ansible_distribution == 'MacOSX'

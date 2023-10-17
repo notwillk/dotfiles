@@ -1,0 +1,5 @@
+- name: Install terminal-notifier
+  ansible.builtin.package:
+    name: terminal-notifier
+    state: present
+  when: ansible_distribution == 'MacOSX'

@@ -1,0 +1,5 @@
+- name: Install mas
+  ansible.builtin.package:
+    name: mas
+    state: present
+  when: ansible_distribution == 'MacOSX'

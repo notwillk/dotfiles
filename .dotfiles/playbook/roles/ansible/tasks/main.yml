@@ -1,0 +1,9 @@
+- name: Checking for ansible
+  command: which ansible
+  register: result
+  changed_when: False
+- name: Install ansible
+  ansible.builtin.package:
+    name: ansible
+    state: present
+  when: result.stdout == ""

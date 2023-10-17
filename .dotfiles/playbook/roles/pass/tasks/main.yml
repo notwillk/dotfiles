@@ -1,0 +1,8 @@
+- name: Install pass
+  ansible.builtin.package:
+    name: pass
+    state: present
+- name: Install pass-otp
+  ansible.builtin.package:
+    name: pass-otp
+    state: present

@@ -1,0 +1,5 @@
+- name: Install handbrake
+  community.general.homebrew_cask:
+    name: handbrake
+    state: present
+  when: ansible_distribution == 'MacOSX'

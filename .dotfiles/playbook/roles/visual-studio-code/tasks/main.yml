@@ -1,0 +1,11 @@
+- name: Install visual studio code
+  community.general.homebrew_cask:
+    name: visual-studio-code
+    state: present
+  when: ansible_distribution == 'MacOSX'
+
+- name: Install code-cli
+  ansible.builtin.package:
+    name: code-cli
+    state: present
+  when: ansible_distribution == 'MacOSX'

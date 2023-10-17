@@ -1,0 +1,5 @@
+- name: Install sf-symbols
+  community.general.homebrew_cask:
+    name: sf-symbols
+    state: present
+  when: ansible_distribution == 'MacOSX'

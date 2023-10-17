@@ -1,0 +1,6 @@
+- name: Install keybase
+  become: false
+  community.general.homebrew_cask:
+    name: keybase
+    state: present
+  when: ansible_distribution == 'MacOSX'

@@ -1,0 +1,5 @@
+- name: Install discovery
+  community.general.mas:
+    id: 1381004916  # Discovery - DNS-SD Browser     
+    state: present
+  when: ansible_distribution == 'MacOSX'

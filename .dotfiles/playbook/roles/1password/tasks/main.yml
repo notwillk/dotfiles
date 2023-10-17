@@ -1,0 +1,5 @@
+- name: Install 1password
+  community.general.homebrew_cask:
+    name: 1password
+    state: present
+  when: ansible_distribution == 'MacOSX'

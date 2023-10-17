@@ -1,0 +1,5 @@
+- name: Install chrome
+  community.general.homebrew_cask:
+    name: google-chrome
+    state: present
+  when: ansible_distribution == 'MacOSX'

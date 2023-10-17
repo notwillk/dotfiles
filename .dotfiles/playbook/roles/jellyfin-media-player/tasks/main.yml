@@ -1,0 +1,5 @@
+- name: Install jellyfin-media-player
+  community.general.homebrew_cask:
+    name: jellyfin-media-player
+    state: present
+  when: ansible_distribution == 'MacOSX'

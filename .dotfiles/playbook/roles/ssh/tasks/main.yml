@@ -1,0 +1,4 @@
+- name: Install ssh-copy-id
+  ansible.builtin.package:
+    name: ssh-copy-id
+    state: present

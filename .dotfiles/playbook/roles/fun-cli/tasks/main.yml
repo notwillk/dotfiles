@@ -1,0 +1,12 @@
+- name: Install cowsay
+  ansible.builtin.package:
+    name: cowsay
+    state: present
+- name: Install lolcat
+  ansible.builtin.package:
+    name: lolcat
+    state: present
+- name: Install xkcd
+  ansible.builtin.package:
+    name: xkcd
+    state: present

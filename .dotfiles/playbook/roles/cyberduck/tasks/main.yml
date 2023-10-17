@@ -1,0 +1,5 @@
+- name: Install cyberduck
+  community.general.homebrew_cask:
+    name: cyberduck
+    state: present
+  when: ansible_distribution == 'MacOSX'
