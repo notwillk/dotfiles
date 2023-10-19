@@ -1,0 +1,7 @@
+function psport() {
+    lsof -i TCP:$1 | grep LISTEN | awk '{print $2}' | xargs ps
+}
+
+function killport() {
+    lsof -i TCP:$1 | grep LISTEN | awk '{print $2}' | uniq | xargs kill -9
+}

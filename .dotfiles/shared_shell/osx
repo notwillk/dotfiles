@@ -1,0 +1,2 @@
+alias pbstrip="pbpaste | pbcopy"
+alias chrome="open -a /Applications/Google\ Chrome.app --new --args --new-window"

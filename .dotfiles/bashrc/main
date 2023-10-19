@@ -1,0 +1,4 @@
+for f in ~/.dotfiles/shared_shell/*
+do
+  source $f
+done
