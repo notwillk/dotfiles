@@ -1,0 +1,4 @@
+[include]
+    path = ~/.dotfiles/gitconfig/untracked
+    path = ~/.dotfiles/gitconfig/aliases
+    path = ~/.dotfiles/gitconfig/core

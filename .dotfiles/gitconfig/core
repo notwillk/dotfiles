@@ -1,0 +1,8 @@
+[color]
+  ui = true
+
+[core]
+  autocrlf = input
+
+[push]
+  default = upstream
