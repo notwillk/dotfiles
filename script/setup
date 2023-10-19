@@ -50,9 +50,9 @@ fi
 
 if [[ `which ansible-playbook` = "" ]]; then
     echo $(green "Downloading ansible and running playbook...")
-    python3 $DOTFILES_DIR/assets/pipx.pyz run --spec ansible ansible-playbook --connection=local -i $DOTFILES_DIR/playbook/hosts $DOTFILES_DIR/playbook/main.yml
+    ANSIBLE_NOCOWS=1 python3 $DOTFILES_DIR/assets/pipx.pyz run --spec ansible ansible-playbook --connection=local -i $DOTFILES_DIR/playbook/hosts $DOTFILES_DIR/playbook/main.yml
 else
     echo $(yellow "Skipped ansible installation")
     echo $(green "Running ansible playbook...")
-    ansible-playbook --connection=local -i $DOTFILES_DIR/playbook/hosts $DOTFILES_DIR/playbook/main.yml
+    ANSIBLE_NOCOWS=1 ansible-playbook --connection=local -i $DOTFILES_DIR/playbook/hosts $DOTFILES_DIR/playbook/main.yml
 fi

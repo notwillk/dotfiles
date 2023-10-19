@@ -2,3 +2,9 @@
   ansible.builtin.package:
     name: pipx
     state: present
+
+- name: Add pipx completions
+  ansible.builtin.command: pipx completions
+
+# - name: Ensure pipx path
+#   ansible.builtin.command: pipx ensurepath

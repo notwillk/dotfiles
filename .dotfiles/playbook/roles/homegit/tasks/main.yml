@@ -1,0 +1,9 @@
+- name: Install or upgrade homegit
+  ansible.builtin.shell: pipx upgrade homegit || pipx install homegit
+
+- name: Clone dotfiles via homegit
+  ansible.builtin.command: homegit clone {{ item.url }}
+  environment:
+    HOMEGIT_REPO: "{{ item.repo }}"
+  with_items:
+    - { repo: "default", url: "https://github.com/notwillk/dotfiles.git" }

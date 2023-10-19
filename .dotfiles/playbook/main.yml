@@ -11,6 +11,8 @@
     - pipx
     - ssh
     - wget
+    # Include after pipx
+    - homegit
 
 - name: Base
   hosts: 127.0.0.1
