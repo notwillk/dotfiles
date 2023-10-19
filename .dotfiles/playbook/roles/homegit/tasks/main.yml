@@ -1,9 +1,16 @@
 - name: Install or upgrade homegit
   ansible.builtin.shell: pipx upgrade homegit || pipx install homegit
 
+- name: Check for homegit repo
+  stat:
+    path: ~/.homegit/default
+  register: default_repo
+  changed_when: False
+  
 - name: Clone dotfiles via homegit
   ansible.builtin.command: homegit clone {{ item.url }}
   environment:
     HOMEGIT_REPO: "{{ item.repo }}"
+  when: not default_repo.stat.exists
   with_items:
     - { repo: "default", url: "https://github.com/notwillk/dotfiles.git" }
