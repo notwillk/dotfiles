@@ -1,0 +1,1 @@
+alias dotfiles-pass="PASSWORD_STORE_DIR=~/.dotfiles/.password-store pass"
