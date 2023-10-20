@@ -1,0 +1,5 @@
+#!/usr/bin/expect -f
+spawn -i ~/.ssh/hosts/$argv/id_ed25519 $argv
+expect "password:"
+send `dotfiles-pass ssh/hosts/$argv`
+expect eof

@@ -1,0 +1,38 @@
+- name: Generate SSH key for github.com
+  community.crypto.openssh_keypair:
+    path: "~/.ssh/hosts/github.com/id_ed25519"
+    type: ed25519
+    state: present
+    comment: william@klancnik.com
+    force: no
+
+- name: Get all ssh hosts
+  find:
+    paths: "~/.ssh/hosts"
+    file_type: directory
+  register: ssh_hosts
+
+- name: Generate ssh keys
+  community.crypto.openssh_keypair:
+    path: "{{ item.path }}/id_ed25519"
+    type: ed25519
+    state: present
+    force: no
+  with_items: "{{ ssh_hosts.files }}"
+
+- name: Get all ssh hosts with passwords
+  find:
+    paths: "~/.dotfiles/.password-store/ssh/hosts"
+    file_type: file
+  register: ssh_passwords
+
+- name: Copy password to host
+  ansible.builtin.command: "~/.dotfiles/playbook/roles/ssh-keys/copy_ssh_key {{ host }}"
+  # debug:
+  #   msg: "{{ host }}"
+  with_items: "{{ ssh_passwords.files }}"
+  vars:
+    host: "{{ item.path | basename | splitext | first }}"
+  ignore_errors: true
+  timeout: 5
+# ssh-copy-id -i ~/.ssh/mykey user@host

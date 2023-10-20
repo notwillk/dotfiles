@@ -1,0 +1,12 @@
+- ansible.builtin.import_role:
+    name: ansible
+- ansible.builtin.import_role:
+    name: git
+- ansible.builtin.import_role:
+    name: mas
+- ansible.builtin.import_role:
+    name: pipx
+- ansible.builtin.import_role:
+    name: ssh
+- ansible.builtin.import_role:
+    name: wget

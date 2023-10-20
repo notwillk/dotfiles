@@ -5,14 +5,9 @@
   become: false
 
   roles:
-    - ansible
-    - git
-    - mas
-    - pipx
-    - ssh
-    - wget
-    # Include after pipx
+    - bootstrap
     - homegit
+    - ssh-keys
 
 - name: Base
   hosts: 127.0.0.1
