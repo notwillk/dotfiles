@@ -1,0 +1,12 @@
+- ansible.builtin.import_role:
+    name: darwin-screenshot-settings
+- ansible.builtin.import_role:
+    name: darwin-dock-settings
+- ansible.builtin.import_role:
+    name: darwin-finder-settings
+- ansible.builtin.import_role:
+    name: darwin-keyboard-settings
+- ansible.builtin.import_role:
+    name: darwin-screensaver-settings
+- ansible.builtin.import_role:
+    name: darwin-trackpad-settings

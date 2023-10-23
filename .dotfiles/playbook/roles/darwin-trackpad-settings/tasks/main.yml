@@ -1,0 +1,8 @@
+- name: Enable natural direction scrolling
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: com.apple.swipescrolldirection
+    type: bool
+    value: true
+    state: present
+  when: ansible_distribution == 'MacOSX'

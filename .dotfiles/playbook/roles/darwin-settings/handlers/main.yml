@@ -1,0 +1,14 @@
+- name: Restart Dock
+  command: "killall Dock"
+  ignore_errors: true
+  listen: restart_dock
+
+- name: Restart SystemUIServer
+  command: "killall SystemUIServer"
+  ignore_errors: true
+  listen: restart_system_ui_server
+
+- name: Restart Finder
+  command: "killall Finder"
+  ignore_errors: true
+  listen: restart_finder

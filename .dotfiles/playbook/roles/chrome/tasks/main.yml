@@ -3,3 +3,21 @@
     name: google-chrome
     state: present
   when: ansible_distribution == 'MacOSX'
+
+- name: Disable swipe between pages (trackpad)
+  community.general.osx_defaults:
+    domain: com.google.Chrome
+    key: AppleEnableSwipeNavigateWithScrolls
+    type: bool
+    value: false
+    state: present
+  when: ansible_distribution == 'MacOSX'
+
+- name: Disable swipe between pages (mouse)
+  community.general.osx_defaults:
+    domain: com.google.Chrome
+    key: AppleEnableMouseSwipeNavigateWithScrolls
+    type: bool
+    value: false
+    state: present
+  when: ansible_distribution == 'MacOSX'

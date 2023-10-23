@@ -1,0 +1,128 @@
+- name: Determining ~/Library hidden status
+  shell: "ls -aOl ~/Library | grep r | head -n 1 | awk -F' ' '{ print $5 }'"
+  register: library_stat
+  changed_when: false
+
+- name: "Show the ~/Library folder"
+  command: "chflags nohidden ~/Library"
+  when: "'hidden' in library_stat.stdout"
+
+- name: Show external hard drives on desktop
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: ShowExternalHardDrivesOnDesktop
+    type: bool
+    value: true
+    state: present
+  when: ansible_distribution == 'MacOSX'
+  notify: restart_finder
+
+- name: Do not how hard drives on desktop
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: ShowHardDrivesOnDesktop
+    type: bool
+    value: false
+    state: present
+  when: ansible_distribution == 'MacOSX'
+  notify: restart_finder
+
+- name: Show mounted servers on desktop
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: ShowMountedServersOnDesktop
+    type: bool
+    value: true
+    state: present
+  when: ansible_distribution == 'MacOSX'
+  notify: restart_finder
+
+- name: Show removable media on desktop
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: ShowRemovableMediaOnDesktop
+    type: bool
+    value: true
+    state: present
+  when: ansible_distribution == 'MacOSX'
+  notify: restart_finder
+
+- name: Show hidden files
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: AppleShowAllFiles
+    type: bool
+    value: true
+    state: present
+  when: ansible_distribution == 'MacOSX'
+  notify: restart_finder
+
+- name: Show all filename extensions
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: AppleShowAllExtensions
+    type: bool
+    value: true
+    state: present
+  when: ansible_distribution == 'MacOSX'
+  notify: restart_finder
+
+- name: Display full POSIX path as Finder window title
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: _FXShowPosixPathInTitle
+    type: bool
+    value: true
+    state: present
+  when: ansible_distribution == 'MacOSX'
+  notify: restart_finder
+
+- name: When performing a search, search the current folder by default
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: FXDefaultSearchScope
+    type: string
+    value: SCcf
+    state: present
+  when: ansible_distribution == 'MacOSX'
+  notify: restart_finder
+
+- name: Disable the warning when changing a file extension
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: FXEnableExtensionChangeWarning
+    type: bool
+    value: false
+    state: present
+  when: ansible_distribution == 'MacOSX'
+  notify: restart_finder
+
+- name: Empty Trash securely by default
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: EmptyTrashSecurely
+    type: bool
+    value: true
+    state: present
+  when: ansible_distribution == 'MacOSX'
+  notify: restart_finder
+
+- name: Disable the creation of .DS_store files on network shares
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: DSDontWriteNetworkStores
+    type: bool
+    value: true
+    state: present
+  when: ansible_distribution == 'MacOSX'
+  notify: restart_finder
+
+- name: Disable the creation of .DS_store files on USB drives
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: DSDontWriteUSBStores
+    type: bool
+    value: true
+    state: present
+  when: ansible_distribution == 'MacOSX'
+  notify: restart_finder

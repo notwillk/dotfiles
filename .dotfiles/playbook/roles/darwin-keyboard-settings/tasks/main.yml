@@ -1,0 +1,8 @@
+- name: Set key repeat speed
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: KeyRepeat
+    type: int
+    value: 0
+    state: present
+  when: ansible_distribution == 'MacOSX'

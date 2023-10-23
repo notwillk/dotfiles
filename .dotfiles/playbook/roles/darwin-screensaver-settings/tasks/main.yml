@@ -1,0 +1,10 @@
+- name: Require password immediately
+  community.general.osx_defaults:
+    host: currenthost
+    domain: com.apple.screensaver
+    key: askForPasswordDelay
+    type: int
+    value: 1
+    state: present
+  when: ansible_distribution == 'MacOSX'
+  notify: restart_system_ui_server

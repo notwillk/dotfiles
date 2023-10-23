@@ -1,0 +1,13 @@
+- name: Add directories to dock
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: persistent-others
+    type: array
+    value:
+      - "{{lookup('file', '~/.dotfiles/playbook/roles/darwin-dock-settings/downloads_value.plist') }}"
+      - "{{lookup('file', '~/.dotfiles/playbook/roles/darwin-dock-settings/screenshots_value.plist') }}"
+    state: present
+  when: ansible_distribution == 'MacOSX'
+  notify: restart_dock
+
+# Maybe update to use https://github.com/wayofdev/ansible-role-dock#-adding-folders
