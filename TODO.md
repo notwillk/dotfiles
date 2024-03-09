@@ -7,6 +7,7 @@
 - [ ] Set functions/aliases
 - [ ] Configure darwin settings
 - [ ] Install GUI apps
-- [ ] Separate setup.sh into separate OS/machine type scripts
-- [ ] Add smarts to setup.sh to automatically choose correct setup script
+- [x] Separate setup.sh into separate OS/machine type scripts
+- [x] Add smarts to setup.sh to automatically choose correct setup script
 - [ ] Refactor to use flakes
+- [ ] Add linux install script and related nix config(s)
