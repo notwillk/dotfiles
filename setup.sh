@@ -16,7 +16,7 @@ else
     echo "Nix already installed."
 fi
 
-if ! [ -f /Users/$USER/.config/home-manager/home.nix ]
+if ! command -v home-manager &> /dev/null
 then
     echo "Installing home-manager..."
     nix-channel --add https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
@@ -25,3 +25,6 @@ then
 else
     echo "Home-manager already installed."
 fi
+
+rm -rf "$HOME/.config/home-manager"
+ln -s "$HOME/.dotfiles/home-manager" "$HOME/.config/home-manager"
