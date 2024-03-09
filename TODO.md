@@ -11,3 +11,4 @@
 - [x] Add smarts to setup.sh to automatically choose correct setup script
 - [ ] Refactor to use flakes
 - [ ] Add linux install script and related nix config(s)
+- [ ] Split nix config(s) into "bootstrapping" configs and ones specific to me
