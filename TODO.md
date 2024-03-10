@@ -4,7 +4,7 @@
 - [x] Install home-manager
 - [ ] Enable secrets in nix
 - [ ] Set git username/etc
-- [ ] Set functions/aliases
+- [x] Set functions/aliases
 - [ ] Configure darwin settings
 - [ ] Install GUI apps
 - [x] Separate setup.sh into separate OS/machine type scripts

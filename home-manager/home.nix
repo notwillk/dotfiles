@@ -37,12 +37,10 @@
     # # fonts?
     # (pkgs.nerdfonts.override { fonts = [ "FantasqueSansMono" ]; })
 
-    # # You can also create simple shell scripts directly inside your
-    # # configuration. For example, this adds a command 'my-hello' to your
-    # # environment:
-    # (pkgs.writeShellScriptBin "my-hello" ''
-    #   echo "Hello, ${config.home.username}!"
-    # '')
+    (writeShellScriptBin "psport" "lsof -i TCP:$1 | grep LISTEN | awk '{print $2}' | xargs ps")
+    (writeShellScriptBin "killport" "lsof -i TCP:$1 | grep LISTEN | awk '{print $2}' | uniq | xargs kill -9")
+    (writeShellScriptBin "gti" "git")
+    # (writeShellScriptBin "chrome" "open -a /Applications/Google\ Chrome.app --new --args --new-window")
   ];
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
