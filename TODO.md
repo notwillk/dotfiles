@@ -1,6 +1,6 @@
 # Todo
 - [x] Install nix
-- [ ] Install nix-darwin
+- [x] Install nix-darwin
 - [x] Install home-manager
 - [ ] Enable secrets in nix
 - [ ] Set git username/etc

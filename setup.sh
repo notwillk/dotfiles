@@ -15,4 +15,4 @@ else
     exit 1
 fi
 
-echo "Done."
+echo "For best results, close this terminal and open a new one"
