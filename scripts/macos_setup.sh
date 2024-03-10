@@ -37,5 +37,11 @@ else
     echo "Home-manager already installed."
 fi
 
+
+echo "Installing ~/.nixpkgs symlink..."
+rm -rf "$HOME/.nixpkgs"
+ln -s "$HOME/.dotfiles/nixpkgs" "$HOME/.nixpkgs"
+
+echo "Installing ~/.config/home-manager symlink..."
 rm -rf "$HOME/.config/home-manager"
 ln -s "$HOME/.dotfiles/home-manager" "$HOME/.config/home-manager"
