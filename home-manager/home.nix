@@ -30,6 +30,7 @@
     # hello
     jq
     # _1password
+    # sops-nix
 
     # # It is sometimes useful to fine-tune packages, for example, by applying
     # # overrides. You can do that directly here, just don't forget the
@@ -80,7 +81,7 @@
 
   # Let Home Manager install and manage itself.
   programs.home-manager = {
-    enable = true;
+    enable = false;
     path = "$HOME/.dotfiles/home-manager/home.nix";
   };
 
