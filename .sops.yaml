@@ -1,0 +1,10 @@
+keys:
+  - &key1 2504791468b153b8a3963cc97ba53d1919c5dfd4
+  - &key2 2504791468b153b8a3963cc97ba53d1919c5dfd4
+creation_rules:
+  - path_regex: secrets/.(yml|yaml|json|env|ini)$
+    key_groups:
+    - pgp:
+      - *key1
+      age:
+      - *key2
