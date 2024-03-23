@@ -66,7 +66,7 @@
             username = "willk";          
 
             file = {
-              ".gitconfig".source = ./gitconfig;
+              ".gitconfig".source = ./homefiles/gitconfig;
             };
           
             sessionVariables = {
