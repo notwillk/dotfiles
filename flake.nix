@@ -17,6 +17,9 @@
       environment.systemPackages = [
           pkgs.sops
           pkgs.age
+          (import ./packages/gti.nix { inherit pkgs; })
+          (import ./packages/psport.nix { inherit pkgs; })
+          (import ./packages/killport.nix { inherit pkgs; })
         ];
 
       # Auto upgrade nix package and the daemon service.
