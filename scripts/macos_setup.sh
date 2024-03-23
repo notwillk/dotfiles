@@ -27,21 +27,8 @@ else
     echo "Nix-darwin already installed."
 fi
 
-if ! command -v home-manager &> /dev/null
-then
-    echo "Installing home-manager..."
-    nix-channel --add https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
-    nix-channel --update
-    # nix-shell '<home-manager>' -A install
-else
-    echo "Home-manager already installed."
-fi
+echo "Configuring system..."
+pushd "$SCRIPT_DIR/.." > /dev/null
+darwin-rebuild switch --flake
+popd > /dev/null
 
-
-echo "Installing ~/.nixpkgs symlink..."
-rm -rf "$HOME/.nixpkgs"
-ln -s "$HOME/.dotfiles/nixpkgs" "$HOME/.nixpkgs"
-
-echo "Installing ~/.config/home-manager symlink..."
-rm -rf "$HOME/.config/home-manager"
-ln -s "$HOME/.dotfiles/home-manager" "$HOME/.config/home-manager"
