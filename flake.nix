@@ -15,7 +15,6 @@
       # List packages installed in system profile. To search by name, run:
       # $ nix-env -qaP | grep wget
       environment.systemPackages = with pkgs; [
-          vim
           sops
           age
         ];
@@ -40,6 +39,10 @@
 
       # The platform the configuration will be used on.
       nixpkgs.hostPlatform = "aarch64-darwin";
+      nixpkgs.config = {
+        allowUnfree = true;
+        allowUnfreePredicate = (_: true);
+      };
     };
   in
   {
@@ -52,6 +55,26 @@
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
+            users.users.willk.home = "/Users/willk";
+            home-manager.users.willk.home = {
+              stateVersion = "23.11"; # Changing this is dangerous
+
+              username = "willk";
+
+              # packages = [
+              #   (pkgs.writeShellScriptBin "psport" "lsof -i TCP:$1 | grep LISTEN | awk '{print $2}' | xargs ps")
+              #   (pkgs.writeShellScriptBin "killport" "lsof -i TCP:$1 | grep LISTEN | awk '{print $2}' | uniq | xargs kill -9")
+              #   (pkgs.writeShellScriptBin "gti" "git")
+              # ];
+
+              file = {
+                ".gitconfig".source = ./gitconfig;
+              };
+
+              sessionVariables = {
+                EDITOR = "nano";
+              };
+            };
           }
       ];
     };
