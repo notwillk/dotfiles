@@ -1,14 +1,19 @@
 # Todo
+- [ ] Enable secrets in nix
+- [ ] Set git username/etc
+- [ ] Configure darwin settings
+- [ ] Refactor the username, hostnames, and architecture to be variables that are passed in or inferred
+- [ ] Extract installer as a self hosted package
+  - [ ] Refactor install scripts run the installer package
+  - [ ] Update README to correct bootstrapping instructions
+- [ ] Refactor homebrew/nix-darwin to be macos only
+  - [ ] Add linux equivalent, where possible
+- [ ] Add linux install script
 - [x] Install nix
 - [x] Install nix-darwin
 - [x] Install home-manager
-- [ ] Enable secrets in nix
-- [ ] Set git username/etc
 - [x] Set functions/aliases
-- [ ] Configure darwin settings
 - [x] Install GUI apps
 - [x] Separate setup.sh into separate OS/machine type scripts
 - [x] Add smarts to setup.sh to automatically choose correct setup script
 - [x] Refactor to use flakes
-- [ ] Add linux install script and related nix config(s)
-- [ ] Split nix config(s) into "bootstrapping" configs and ones specific to me
