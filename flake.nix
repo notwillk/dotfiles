@@ -17,10 +17,13 @@
       environment.systemPackages = [
         pkgs.sops
         pkgs.age
-        (import ./packages/gti.nix { inherit pkgs; })
         (import ./packages/psport.nix { inherit pkgs; })
         (import ./packages/killport.nix { inherit pkgs; })
       ];
+
+      environment.shellAliases = {
+        gti = "git";
+      };
 
       homebrew = {
         enable = true;

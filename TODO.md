@@ -6,7 +6,7 @@
 - [ ] Set git username/etc
 - [x] Set functions/aliases
 - [ ] Configure darwin settings
-- [ ] Install GUI apps
+- [x] Install GUI apps
 - [x] Separate setup.sh into separate OS/machine type scripts
 - [x] Add smarts to setup.sh to automatically choose correct setup script
 - [x] Refactor to use flakes
