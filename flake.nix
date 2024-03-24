@@ -15,8 +15,10 @@
       # List packages installed in system profile. To search by name, run:
       # $ nix-env -qaP | grep wget
       environment.systemPackages = [
-        pkgs.sops
         pkgs.age
+        pkgs.jq
+        pkgs.librsvg
+        pkgs.sops
         (import ./packages/psport.nix { inherit pkgs; })
         (import ./packages/killport.nix { inherit pkgs; })
       ];
