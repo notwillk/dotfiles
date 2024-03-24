@@ -31,14 +31,14 @@ if ! command -v brew &> /dev/null
 then
     echo "Installing homebrew..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    # (echo; echo 'eval "$(/opt/homebrew/bin/brew shellenv)"') >> /Users/willk/.zprofile
-    # eval "$(/opt/homebrew/bin/brew shellenv)"
 else
     echo "Homebrew already installed."
 fi
 
-echo "Configuring system..."
-pushd "$SCRIPT_DIR/.." > /dev/null
-darwin-rebuild switch --flake
-popd > /dev/null
-
+if test -f "$SCRIPT_DIR/scripts/switch.sh"
+then
+  echo "Configuring system..."
+  "$SCRIPT_DIR/scripts/switch.sh"
+else
+  echo "Please clone the repo, and rerun this script to finish the installation."
+fi
