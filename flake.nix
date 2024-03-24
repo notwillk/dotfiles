@@ -15,12 +15,29 @@
       # List packages installed in system profile. To search by name, run:
       # $ nix-env -qaP | grep wget
       environment.systemPackages = [
-          pkgs.sops
-          pkgs.age
-          (import ./packages/gti.nix { inherit pkgs; })
-          (import ./packages/psport.nix { inherit pkgs; })
-          (import ./packages/killport.nix { inherit pkgs; })
+        pkgs.sops
+        pkgs.age
+        (import ./packages/gti.nix { inherit pkgs; })
+        (import ./packages/psport.nix { inherit pkgs; })
+        (import ./packages/killport.nix { inherit pkgs; })
+      ];
+
+      homebrew = {
+        enable = true;
+        casks = [
+          "1password"
+          "adobe-creative-cloud"
+          "alacritty"
+          "discord"
+          "google-chrome"
+          "notion"
+          "visual-studio-code"
+          "zoom"
         ];
+        masApps = {
+          "Xcode" = 497799835; # Xcode IDE for macOS
+        };
+      };
 
       # Auto upgrade nix package and the daemon service.
       services.nix-daemon.enable = true;
