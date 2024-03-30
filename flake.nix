@@ -19,12 +19,14 @@
         pkgs.jq
         pkgs.librsvg
         pkgs.sops
+        pkgs.ansible
         (import ./packages/psport.nix { inherit pkgs; })
         (import ./packages/killport.nix { inherit pkgs; })
       ];
 
       environment.shellAliases = {
         gti = "git";
+        code = "\"/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code\"";
       };
 
       homebrew = {
