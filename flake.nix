@@ -20,7 +20,8 @@
         pkgs.librsvg
         pkgs.sops
         pkgs.ansible
-        pkgs.python3
+        pkgs.python3Full
+        pkgs.python3Full.pkgs.requests
         (import ./packages/psport.nix { inherit pkgs; })
         (import ./packages/killport.nix { inherit pkgs; })
       ];
