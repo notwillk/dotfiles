@@ -45,6 +45,7 @@
         ];
         masApps = {
           "Xcode" = 497799835; # Xcode IDE for macOS
+          "Lungo" = 1263070803;
         };
       };
 
