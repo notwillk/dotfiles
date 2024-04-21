@@ -41,6 +41,7 @@
           "google-chrome"
           "notion"
           "visual-studio-code"
+          "vlc"
           "zoom"
         ];
         masApps = {
