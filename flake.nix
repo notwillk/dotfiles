@@ -42,6 +42,8 @@
           "google-chrome"
           "notion"
           "ollama"
+          "private-internet-access"
+          "transmission"
           "visual-studio-code"
           "vlc"
           "zoom"
