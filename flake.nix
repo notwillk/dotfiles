@@ -49,8 +49,9 @@
           "zoom"
         ];
         masApps = {
-          "Xcode" = 497799835; # Xcode IDE for macOS
           "Lungo" = 1263070803;
+          "Xcode" = 497799835; # Xcode IDE for macOS
+          "Telegram" = 747648890;
         };
       };
 
