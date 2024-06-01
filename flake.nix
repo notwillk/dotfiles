@@ -41,6 +41,7 @@
           "discord"
           "google-chrome"
           "notion"
+          "obsidian"
           "ollama"
           "private-internet-access"
           "transmission"
