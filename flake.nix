@@ -20,6 +20,7 @@
         pkgs.librsvg
         pkgs.sops
         pkgs.ansible
+        pkgs.openssh
         pkgs.python3Full
         pkgs.python3Full.pkgs.requests
         (import ./packages/psport.nix { inherit pkgs; })
@@ -47,6 +48,7 @@
           "transmission"
           "visual-studio-code"
           "vlc"
+          "yubico-yubikey-manager"
           "zoom"
         ];
         masApps = {
