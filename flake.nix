@@ -40,6 +40,7 @@
           "alacritty"
           "balenaetcher"
           "discord"
+          "docker"
           "google-chrome"
           "notion"
           "obsidian"
