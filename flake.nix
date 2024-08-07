@@ -47,6 +47,7 @@
           "obsidian"
           "ollama"
           "private-internet-access"
+          "telegram-desktop"
           "transmission"
           "visual-studio-code"
           "vlc"
