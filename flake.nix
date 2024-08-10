@@ -43,7 +43,6 @@
           "docker"
           "google-chrome"
           "notion"
-          "nx-studio"
           "obsidian"
           "ollama"
           "private-internet-access"
