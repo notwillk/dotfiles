@@ -6,14 +6,14 @@ A way of installing my preferred setup for a posix environment
 
 Run `./install.sh`
 
-## Homelint
+## dotrules
 
-Homelint is a simple CLI tool to lint, check, and fix your home environment setup using modular "rule" scripts.
+dotrules is a simple CLI tool to lint, check, and fix your home environment setup using modular "rule" scripts.
 
 ### Usage
 
 ```bash
-homelint [--verbose] [--rules <glob>] <command> [<rule-id>]
+dotrules [--verbose] [--rules <glob>] <command> [<rule-id>]
 ```
 
 #### Commands
@@ -25,16 +25,16 @@ homelint [--verbose] [--rules <glob>] <command> [<rule-id>]
   Run the `check()` function from rules. Exits with nonzero if any fail.  
   Example:
   ```bash
-  homelint check
-  homelint check homelint-in-path
+  dotrules check
+  dotrules check dotrules-in-path
   ```
 
 - `fix [<rule-id>]`  
   Run `check()`, and if it fails, attempt to run `fix()` (if present).  
   Example:
   ```bash
-  homelint fix
-  homelint fix dotfiles-cloned
+  dotrules fix
+  dotrules fix dotfiles-cloned
   ```
 
 #### Options
@@ -67,17 +67,17 @@ All functions receive a single argument: the `VERBOSE` flag (0 or 1).
 #### Example Rule
 
 ```bash
-# rules.d/001-homelint-in-path.rule.sh
-ID="homelint-in-path"
-DESCRIPTION="Ensure 'homelint' is installed and on PATH"
+# rules.d/001-dotrules-in-path.rule.sh
+ID="dotrules-in-path"
+DESCRIPTION="Ensure 'dotrules' is installed and on PATH"
 
 check() {
-  command -v homelint >/dev/null 2>&1
+  command -v dotrules >/dev/null 2>&1
 }
 
 fix() {
   mkdir -p "$HOME/.bin"
-  cp ./homelint "$HOME/.bin/"
+  cp ./dotrules "$HOME/.bin/"
   if [ -n "$BASH_VERSION" ]; then
     echo 'export PATH="$HOME/.bin:$PATH"' >> "$HOME/.bashrc"
   elif [ -n "$ZSH_VERSION" ]; then
@@ -94,15 +94,15 @@ fix() {
 
 ```bash
 # See all rules
-homelint list
+dotrules list
 
 # Check all rules
-homelint check
+dotrules check
 
 # Fix problems
-homelint fix
+dotrules fix
 
 # Check/fix a specific rule
-homelint check homelint-in-path
-homelint fix homelint-in-path
+dotrules check dotrules-in-path
+dotrules fix dotrules-in-path
 ```

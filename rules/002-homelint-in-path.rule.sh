@@ -1,5 +1,5 @@
-ID="homelint-in-path"
-DESCRIPTION="Ensure 'homelint' is installed"
+ID="dotrules-in-path"
+DESCRIPTION="Ensure 'dotrules' is installed"
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_PATH="${DOTFILES_PATH:-$HOME/.dotfiles}"
@@ -21,13 +21,13 @@ _hl_detect_rc() {
   fi
 }
 
-# PASS if homelint is already available on PATH
+# PASS if dotrules is already available on PATH
 check() {
   VERBOSE="$1"
   if [[ "$VERBOSE" == "1" ]]; then
-    echo "👀 Checking if 'homelint' is available on PATH..."
+    echo "👀 Checking if 'dotrules' is available on PATH..."
   fi
-  command -v homelint >/dev/null 2>&1;
+  command -v dotrules >/dev/null 2>&1;
 }
 
 can_fix() {
@@ -37,8 +37,8 @@ can_fix() {
   fi
 
   [ -d "$DOTFILES_BIN_PATH" ] && \
-  [ -f "$DOTFILES_BIN_PATH/homelint" ] && \
-  [ -x "$DOTFILES_BIN_PATH/homelint" ]
+  [ -f "$DOTFILES_BIN_PATH/dotrules" ] && \
+  [ -x "$DOTFILES_BIN_PATH/dotrules" ]
 }
 
 fix() {
