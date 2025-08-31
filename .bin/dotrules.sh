@@ -58,7 +58,7 @@ else
 fi
 
 mapfile -t RULE_FILES < <(compgen -G "$abs_glob" || true)
-IFS=$'\n' RULE_FILES=($(printf '%s\n' "${RULE_FILES[@]}" | sort)); unset IFS
+mapfile -t RULE_FILES < <(printf '%s\n' "${RULE_FILES[@]}" | sort)
 
 if ((${#RULE_FILES[@]}==0)); then
   echo "🙈  no matching rules in $RULE_FILE_MATCHER"
