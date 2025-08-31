@@ -3,6 +3,7 @@ DESCRIPTION="Ensure 'homelint' is installed"
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_PATH="${DOTFILES_PATH:-$HOME/.dotfiles}"
+DOTFILES_BIN_PATH="$DOTFILES_PATH/bin"
 
 # Detect the best rc file for this shell
 _hl_detect_rc() {
@@ -35,9 +36,9 @@ can_fix() {
     echo "👀 Verifying the git repo exists"
   fi
 
-  [ -d "$DOTFILES_PATH" ] && \
-  [ -f "$DOTFILES_PATH/homelint" ] && \
-  [ -x "$DOTFILES_PATH/homelint" ]
+  [ -d "$DOTFILES_BIN_PATH" ] && \
+  [ -f "$DOTFILES_BIN_PATH/homelint" ] && \
+  [ -x "$DOTFILES_BIN_PATH/homelint" ]
 }
 
 fix() {
@@ -50,9 +51,9 @@ fix() {
   fi
 
   if [[ "$SHELL_KIND" == "fish" ]]; then
-    line="set -x PATH $DOTFILES_PATH \$PATH"
+    line="set -x PATH $DOTFILES_BIN_PATH \$PATH"
   else
-    line="export PATH=\$PATH:$DOTFILES_PATH"
+    line="export PATH=\$PATH:$DOTFILES_BIN_PATH"
   fi
 
   if ! grep -Fxq "$line" "$RCFILE"; then
