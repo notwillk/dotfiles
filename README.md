@@ -37,13 +37,6 @@ homelint [--verbose] [--rules <glob>] <command> [<rule-id>]
   homelint fix dotfiles-cloned
   ```
 
-- `update`  
-  Pull the latest changes for your dotfiles repo.  
-  Example:
-  ```bash
-  homelint update
-  ```
-
 #### Options
 
 - `--verbose, -v`  
@@ -85,7 +78,6 @@ check() {
 fix() {
   mkdir -p "$HOME/.bin"
   cp ./homelint "$HOME/.bin/"
-  # detect shell type and update config file accordingly
   if [ -n "$BASH_VERSION" ]; then
     echo 'export PATH="$HOME/.bin:$PATH"' >> "$HOME/.bashrc"
   elif [ -n "$ZSH_VERSION" ]; then
@@ -113,7 +105,4 @@ homelint fix
 # Check/fix a specific rule
 homelint check homelint-in-path
 homelint fix homelint-in-path
-
-# Update your dotfiles repo
-homelint update
 ```
