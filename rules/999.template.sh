@@ -1,3 +1,5 @@
+# shellcheck disable=SC2034,SC2148
+
 ID="template"
 DESCRIPTION="Not a real rule - copy this to create a new one"
 

@@ -1,3 +1,5 @@
+# shellcheck disable=SC2034,SC2148
+
 ID="dotrules-in-path-sh"
 DESCRIPTION="Ensure 'dotrules' is installed (sh)"
 SKIP_VALIDATE_AFTER_FIX="true"

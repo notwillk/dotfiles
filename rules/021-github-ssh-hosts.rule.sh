@@ -1,3 +1,5 @@
+# shellcheck disable=SC2034,SC2148
+
 ID="github-ssh-hosts"
 DESCRIPTION="Ensure that the default GitHub SSH hosts exist in known hosts"
 

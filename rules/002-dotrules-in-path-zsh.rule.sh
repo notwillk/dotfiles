@@ -1,3 +1,5 @@
+# shellcheck disable=SC2034,SC2148
+
 ID="dotrules-in-path-zsh"
 DESCRIPTION="Ensure 'dotrules' is installed (zsh)"
 SKIP_VALIDATE_AFTER_FIX="true"

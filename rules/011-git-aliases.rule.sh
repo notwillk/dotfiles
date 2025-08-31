@@ -1,3 +1,5 @@
+# shellcheck disable=SC2034,SC2148
+
 ID="git-aliases"
 DESCRIPTION="Ensure that useful git aliases are set up"
 

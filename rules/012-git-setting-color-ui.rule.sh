@@ -1,3 +1,5 @@
+# shellcheck disable=SC2034,SC2148
+
 SECTION="color"
 VAR="ui"
 VALUE="true"

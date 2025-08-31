@@ -1,3 +1,5 @@
+# shellcheck disable=SC2034,SC2148
+
 ID="dotfiles-cloned"
 DESCRIPTION="Ensure dotfiles is cloned"
 

@@ -1,3 +1,5 @@
+# shellcheck disable=SC2034,SC2148
+
 COMMAND_NAME="dotrules"
 ID="$COMMAND_NAME-in-path-bash"
 DESCRIPTION="Ensure '$COMMAND_NAME' is installed (bash)"

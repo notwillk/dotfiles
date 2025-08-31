@@ -1,3 +1,5 @@
+# shellcheck disable=SC2034,SC2148
+
 ID="dotrules-in-path-fish"
 DESCRIPTION="Ensure 'dotrules' is installed (fish)"
 SKIP_VALIDATE_AFTER_FIX="true"
