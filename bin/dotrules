@@ -29,7 +29,7 @@ fi
 
 verbose_log() { [[ $VERBOSE -eq 1 ]] && echo "$*" || true; }
 has(){ declare -F "$1" >/dev/null 2>&1; }
-unload_file(){ unset ID DESCRIPTION applies check can_fix fix; }
+unload_file(){ unset ID DESCRIPTION SKIP_VALIDATE_AFTER_FIX applies check can_fix fix; }
 load_file(){
   unload_file
   # shellcheck disable=SC1090
@@ -98,12 +98,23 @@ for file in "${RULE_FILES[@]}"; do
           echo "🙅 [$ID] cannot auto-fix"
           RC=1
         elif has fix; then
-          if fix "$VERBOSE" && check "$VERBOSE"; then
-            echo "🛠️ $ID - fixed!"
+          if fix "$VERBOSE"; then
+            echo "🛠️  $ID - fixed!"
             FIXED=$((FIXED + 1))
           else
             echo "😭 $ID - fix failed"
             RC=1
+          fi
+          if [[ "$SKIP_VALIDATE_AFTER_FIX" = "true" ]]; then
+            echo "⚠️  $ID - skipping validation after fix"
+          else
+            if check "$VERBOSE"; then
+              echo "🛠️ $ID - fixed!"
+              FIXED=$((FIXED + 1))
+            else
+              echo "😭 $ID - fix failed"
+              RC=1
+            fi
           fi
         else
           echo "🤷 [$ID] no fix defined"

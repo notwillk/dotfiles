@@ -1,5 +1,9 @@
 ID="dotrules-in-path-zsh"
 DESCRIPTION="Ensure 'dotrules' is installed (zsh)"
+SKIP_VALIDATE_AFTER_FIX="true"
+
+DOTFILES_PATH="${DOTFILES_PATH:-$HOME/.dotfiles}"
+DOTFILES_BIN_PATH="${DOTFILES_BIN_PATH:-$DOTFILES_PATH/bin}"
 
 RCFILE="$HOME/.zshrc"
 

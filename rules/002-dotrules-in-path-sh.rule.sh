@@ -1,5 +1,9 @@
 ID="dotrules-in-path-sh"
 DESCRIPTION="Ensure 'dotrules' is installed (sh)"
+SKIP_VALIDATE_AFTER_FIX="true"
+
+DOTFILES_PATH="${DOTFILES_PATH:-$HOME/.dotfiles}"
+DOTFILES_BIN_PATH="${DOTFILES_BIN_PATH:-$DOTFILES_PATH/bin}"
 
 RCFILE="$HOME/.profile"
 

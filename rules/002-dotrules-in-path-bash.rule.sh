@@ -1,5 +1,10 @@
-ID="dotrules-in-path-bash"
-DESCRIPTION="Ensure 'dotrules' is installed (bash)"
+COMMAND_NAME="dotrules"
+ID="$COMMAND_NAME-in-path-bash"
+DESCRIPTION="Ensure '$COMMAND_NAME' is installed (bash)"
+SKIP_VALIDATE_AFTER_FIX="true"
+
+DOTFILES_PATH="${DOTFILES_PATH:-$HOME/.dotfiles}"
+DOTFILES_BIN_PATH="${DOTFILES_BIN_PATH:-$DOTFILES_PATH/bin}"
 
 RCFILE="$HOME/.bashrc"
 
@@ -16,9 +21,9 @@ applies() {
 check() {
   VERBOSE="$1"
   if [[ "$VERBOSE" == "1" ]]; then
-    echo "👀 Checking if 'dotrules' is available on PATH..."
+    echo "👀 Checking if '$COMMAND_NAME' is available on PATH..."
   fi
-  command -v dotrules >/dev/null 2>&1;
+  command -v $COMMAND_NAME >/dev/null 2>&1;
 }
 
 can_fix() {
@@ -27,9 +32,7 @@ can_fix() {
     echo "👀 Verifying the git repo exists"
   fi
 
-  [ -d "$DOTFILES_BIN_PATH" ] && \
-  [ -f "$DOTFILES_BIN_PATH/dotrules" ] && \
-  [ -x "$DOTFILES_BIN_PATH/dotrules" ]
+  [ -d "$DOTFILES_BIN_PATH" ] && [ -f "$DOTFILES_BIN_PATH/$COMMAND_NAME" ] && [ -x "$DOTFILES_BIN_PATH/$COMMAND_NAME" ]
 }
 
 fix() {

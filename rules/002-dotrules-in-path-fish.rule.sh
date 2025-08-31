@@ -1,5 +1,9 @@
 ID="dotrules-in-path-fish"
 DESCRIPTION="Ensure 'dotrules' is installed (fish)"
+SKIP_VALIDATE_AFTER_FIX="true"
+
+DOTFILES_PATH="${DOTFILES_PATH:-$HOME/.dotfiles}"
+DOTFILES_BIN_PATH="${DOTFILES_BIN_PATH:-$DOTFILES_PATH/bin}"
 
 RCFILE="$HOME/.config/fish/config.fish"
 

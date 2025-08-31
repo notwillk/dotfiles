@@ -16,6 +16,6 @@ check() {
   return 0
 }
 
-can_fix() { return 1; }
+can_fix() { return 0; }
 
 fix() { git -C "$DOTFILES_PATH" pull --ff-only; }
