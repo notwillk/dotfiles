@@ -16,8 +16,8 @@ GIT_ALIASES["head"]="log --stat --decorate -1 HEAD"
 GIT_ALIASES["undo"]="reset --soft HEAD^"
 GIT_ALIASES["aliases"]="!git config --get-regexp ^alias | cut -c 7-"
 GIT_ALIASES["recent"]="!git for-each-ref --sort=-committerdate refs/heads/ --format='%(refname)' | cut -c 12- | head"
-GIT_ALIASES["wip"]="!sh -c 'git commit -m \\\"WIP: \$(date \\\"+%Y-%m-%d %H:%M:%S\\\")\\\"'"
-GIT_ALIASES["unwip"]="!f(){ msg=\$(git log -1 --pretty=%B) && echo \\\"\$msg\\\" | grep -Eq '^WIP(:|$)' && git reset --soft HEAD^ && f || true; }; f"
+GIT_ALIASES["wip"]="!sh -c 'git commit -m \"WIP: \$(date \"+%Y-%m-%d %H:%M:%S\")\"'"
+GIT_ALIASES["unwip"]="!f(){ msg=\$(git log -1 --pretty=%B) && echo \"\$msg\" | grep -Eq '^WIP(:|$)' && git reset --soft HEAD^ && f || true; }; f"
 
 check() {
   local VERBOSE="${1:-0}"
