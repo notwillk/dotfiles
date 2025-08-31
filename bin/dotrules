@@ -77,13 +77,13 @@ for file in "${RULE_FILES[@]}"; do
   verbose_log "💡  Rule description: $DESCRIPTION"
 
   if [[ -n "$TARGET_ID" && "$TARGET_ID" != "$ID" ]]; then
-    verbose_log "⏭️  Skipping rule $ID"
-    break
+    verbose_log "🫥  Skipping rule $ID"
+    continue
   fi
 
   if [[ "$CMD" != "list" ]] && has applies && ! applies "$VERBOSE"; then
-    echo "⏭️  Skipped: $ID"
-    break
+    echo "🫥  Skipped: $ID"
+    continue
   fi
 
   case "$CMD" in
