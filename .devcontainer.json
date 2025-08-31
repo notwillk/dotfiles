@@ -1,6 +1,6 @@
 {
-    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
-    "features": {
-         "ghcr.io/devcontainers/features/github-cli:1": {}
-    }
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  }
 }

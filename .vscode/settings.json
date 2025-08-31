@@ -1,0 +1,12 @@
+{
+  "editor.formatOnSave": true,
+  "[shellscript]": {
+    "editor.defaultFormatter": "foxundermoon.shell-format",
+    "editor.formatOnSave": true
+  },
+  "shellcheck.enable": true,
+  "shellcheck.run": "onSave",
+  "files.eol": "\n",
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true
+}
