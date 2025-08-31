@@ -105,7 +105,7 @@ for file in "${RULE_FILES[@]}"; do
             echo "😭 $ID - fix failed"
             RC=1
           fi
-          if [[ "$SKIP_VALIDATE_AFTER_FIX" = "true" ]]; then
+          if has SKIP_VALIDATE_AFTER_FIX && [[ "$SKIP_VALIDATE_AFTER_FIX" = "true" ]]; then
             echo "⚠️  $ID - skipping validation after fix"
           else
             if check "$VERBOSE"; then
