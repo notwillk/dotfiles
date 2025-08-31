@@ -1,127 +1,116 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+is_absolute_path() { [[ "$1" = /* ]] }
+
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RULE_DIR="$DIR/rules.d"
+RULE_FILE_MATCHER="rules.d/*.rule.sh"
+abs_glob=$(is_absolute_path "$RULE_FILE_MATCHER" && echo "$RULE_FILE_MATCHER" || echo "$DIR/$RULE_FILE_MATCHER")
 CMD=""
 TARGET_ID=""
 VERBOSE=0
 
-# parse args
 args=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --verbose|-v) VERBOSE=1; shift ;;
-    --rules) RULE_DIR="$2"; shift 2 ;;
+    --rules) RULE_FILE_MATCHER="$2"; shift 2 ;;
     list|check|fix) CMD="$1"; shift; TARGET_ID="${1:-}"; [ -n "$TARGET_ID" ] && shift || true ;;
     *) args+=("$1"); shift ;;
   esac
 done
-set -- "${args[@]:-}"
 
-vlog(){ [[ $VERBOSE -eq 1 ]] && echo "🔎 $*"; }
+if ((${#args[@]})); then
+  set -- "${args[@]}"
+else
+  set --
+fi
+
+verbose_log() { [[ $VERBOSE -eq 1 ]] && echo "$*" || true; }
 has(){ declare -F "$1" >/dev/null 2>&1; }
+unload_file(){ unset ID DESCRIPTION applies check can_fix fix; }
+load_file(){
+  unload_file
+  # shellcheck disable=SC1090
+  . "$1"
+}
 
 usage() {
   cat >&2 <<USAGE
-usage: $(basename "$0") [--verbose] [--rules <dir>] list
-       $(basename "$0") [--verbose] [--rules <dir>] check [<rule-id>]
-       $(basename "$0") [--verbose] [--rules <dir>] fix   [<rule-id>]
+usage: $(basename "$0") [--verbose] [--rules <glob>] list [<rule-id>]
+       $(basename "$0") [--verbose] [--rules <glob>] check [<rule-id>]
+       $(basename "$0") [--verbose] [--rules <glob>] fix [<rule-id>]
 USAGE
   exit 2
 }
 
-# gather rule files
-mapfile -t RULE_FILES < <(compgen -G "$RULE_DIR"/*.rule.sh || true)
+if [[ "$CMD" != "list" && "$CMD" != "check" && "$CMD" != "fix" ]]; then
+  usage
+fi
 
-rule_id_from_file() {
-  local f="$1"; unset ID DESC
-  . "$f"
-  printf "%s" "${ID:-}"
-}
+verbose_log "ℹ️  Rules: $RULE_FILE_MATCHER"
+verbose_log "ℹ️  Command: $CMD"
+if [[ -n "$TARGET_ID" ]]; then
+  verbose_log "ℹ️  Rule ID: $TARGET_ID"
+else
+  verbose_log "ℹ️  Rule ID: *"
+fi
 
-run_rule_file() {
-  local f="$1"
-  # shellcheck disable=SC1090
-  . "$f"  # expects: ID, DESC, check(), optional applies(), can_fix(), fix()
-  local id="${ID:-}" desc="${DESC:-}"
-  if [[ -z "$id" || -z "$desc" || ! $(type -t check) == "function" ]]; then
-    echo "⚠️  [INVALID] $f (missing ID/DESC/check)"; return 1
+mapfile -t RULE_FILES < <(compgen -G "$abs_glob" || true)
+IFS=$'\n' RULE_FILES=($(printf '%s\n' "${RULE_FILES[@]}" | sort)); unset IFS
+
+if ((${#RULE_FILES[@]}==0)); then
+  echo "🙈  no matching rules in $RULE_FILE_MATCHER"
+  exit 0
+fi
+
+RC=0
+for file in "${RULE_FILES[@]}"; do
+  load_file "$file"
+
+  verbose_log "📄 Rule file: $file"
+  verbose_log "📣  Rule ID: $ID"
+  verbose_log "💡  Rule description: $DESCRIPTION"
+
+  if [[ -n "$TARGET_ID" && "$TARGET_ID" != "$ID" ]]; then
+    verbose_log "⏭️  Skipping rule $ID"
+    break
   fi
 
-  vlog "loaded rule $id from $(basename "$f")"
-
-  if [[ "$CMD" == "list" ]]; then
-    echo "📋 $id - $desc"
-    return 0
+  if [[ "$CMD" != "list" ]] && has applies && ! applies; then
+    echo "⏭️  Skipped: $ID"
+    break
   fi
 
-  if has applies && ! applies; then
-    echo "⏭️  [SKIP][$id] $desc"
-    return 0
-  fi
-
-  if check; then
-    echo "✅ [$id] $desc"
-    return 0
-  fi
-
-  echo "❌ [$id] $desc"
-
-  if [[ "$CMD" == "fix" ]]; then
-    if has can_fix && ! can_fix; then
-      echo "🙅 [$id] cannot auto-fix (can_fix() says no)"
-      return 1
-    fi
-    if has fix; then
-      echo "🛠️ [$id] attempting fix…"
-      if fix && check; then
-        echo "✨ [$id] fixed!"
-        return 0
+  case "$CMD" in
+    list) echo "📋 $ID - $DESCRIPTION" ;;
+    check) check && echo "✅ $ID" || { echo "❌ $ID"; RC=1; } ;;
+    fix)
+      if check; then
+        echo "✅ $ID"
       else
-        echo "⚠️ [$id] still failing"
-        return 1
+        echo "❌ $ID"
+        if has can_fix && ! can_fix; then
+          echo "🙅 [$ID] cannot auto-fix"
+          RC=1
+        elif has fix; then
+          if fix && check; then
+            echo "🛠️ $ID - fixed!"
+          else
+            echo "😭 $ID - fix failed"
+            RC=1
+          fi
+        else
+          echo "🤷 [$ID] no fix defined"
+          RC=1
+        fi
       fi
-    else
-      echo "🤷 [$id] no fix() defined"
-      return 1
-    fi
-  fi
+      ;;
+  esac
 
-  return 1
-}
+  unload_file
+done
 
-[[ $VERBOSE -eq 1 ]] && echo "🔎 scanning rules in: $RULE_DIR"
+echo "🏁 Done, you may need to restart your shell for changes to take effect"
 
-# dispatch
-case "$CMD" in
-  list)
-    if [[ ${#RULE_FILES[@]} -eq 0 ]]; then
-      echo "ℹ️  no rules found in $RULE_DIR"; exit 0
-    fi
-    for f in "${RULE_FILES[@]}"; do run_rule_file "$f"; done
-    ;;
-  check|fix)
-    if [[ ${#RULE_FILES[@]} -eq 0 ]]; then
-      echo "ℹ️  no rules found in $RULE_DIR"; exit 0
-    fi
-    RC=0
-    if [[ -n "$TARGET_ID" ]]; then
-      MATCH=""
-      for f in "${RULE_FILES[@]}"; do
-        rid="$(rule_id_from_file "$f")"
-        vlog "saw rule id=$rid from $(basename "$f")"
-        if [[ "$rid" == "$TARGET_ID" ]]; then MATCH="$f"; break; fi
-      done
-      if [[ -z "$MATCH" ]]; then
-        echo "❓ no rule with id '$TARGET_ID' in $RULE_DIR"
-        exit 3
-      fi
-      run_rule_file "$MATCH" || RC=1
-    else
-      for f in "${RULE_FILES[@]}"; do run_rule_file "$f" || RC=1; done
-    fi
-    exit "$RC"
-    ;;
-  *) usage ;;
-esac
+exit "$RC"
