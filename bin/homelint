@@ -4,7 +4,7 @@ set -euo pipefail
 is_absolute_path() { [[ "$1" = /* ]] }
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RULE_FILE_MATCHER="../rules.d/*.rule.sh"
+RULE_FILE_MATCHER="../rules/*.rule.sh"
 abs_glob=$(is_absolute_path "$RULE_FILE_MATCHER" && echo "$RULE_FILE_MATCHER" || echo "$DIR/$RULE_FILE_MATCHER")
 CMD=""
 TARGET_ID=""
