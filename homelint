@@ -88,24 +88,24 @@ for file in "${RULE_FILES[@]}"; do
     break
   fi
 
-  if [[ "$CMD" != "list" ]] && has applies && ! applies; then
+  if [[ "$CMD" != "list" ]] && has applies && ! applies "$VERBOSE"; then
     echo "⏭️  Skipped: $ID"
     break
   fi
 
   case "$CMD" in
     list) echo "📋 $ID - $DESCRIPTION" ;;
-    check) check && echo "✅ $ID" || { echo "❌ $ID"; RC=1; } ;;
+    check) check "$VERBOSE" && echo "✅ $ID" || { echo "❌ $ID"; RC=1; } ;;
     fix)
-      if check; then
+      if check "$VERBOSE"; then
         echo "✅ $ID"
       else
         echo "❌ $ID"
-        if has can_fix && ! can_fix; then
+        if has can_fix && ! can_fix "$VERBOSE"; then
           echo "🙅 [$ID] cannot auto-fix"
           RC=1
         elif has fix; then
-          if fix && check; then
+          if fix "$VERBOSE" && check "$VERBOSE"; then
             echo "🛠️ $ID - fixed!"
             FIXED=$((FIXED + 1))
           else

@@ -21,16 +21,33 @@ _hl_detect_rc() {
 }
 
 # PASS if homelint is already available on PATH
-check() { command -v homelint >/dev/null 2>&1; }
+check() {
+  VERBOSE="$1"
+  if [[ "$VERBOSE" == "1" ]]; then
+    echo "👀 Checking if 'homelint' is available on PATH..."
+  fi
+  command -v homelint >/dev/null 2>&1;
+}
 
 can_fix() {
+  VERBOSE="$1"
+  if [[ "$VERBOSE" == "1" ]]; then
+    echo "👀 Verifying the git repo exists"
+  fi
+
   [ -d "$DOTFILES_PATH" ] && \
   [ -f "$DOTFILES_PATH/homelint" ] && \
   [ -x "$DOTFILES_PATH/homelint" ]
 }
 
 fix() {
+  VERBOSE="$1"
+
   _hl_detect_rc
+  if [[ "$VERBOSE" == "1" ]]; then
+    echo "ℹ️ Detected shell kind: $SHELL_KIND"
+    echo "ℹ️ Using rc file: $RCFILE"
+  fi
 
   if [[ "$SHELL_KIND" == "fish" ]]; then
     line="set -x PATH $DOTFILES_PATH \$PATH"
@@ -39,6 +56,12 @@ fix() {
   fi
 
   if ! grep -Fxq "$line" "$RCFILE"; then
+    if [[ "$VERBOSE" == "1" ]]; then
+      echo "✏️ Adding '$line' to $RCFILE"
+    else
+      echo "😲 '$line' already exists in $RCFILE"
+    fi
+
     echo "$line" >> "$RCFILE"
   fi
 
