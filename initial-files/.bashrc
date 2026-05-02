@@ -12,8 +12,3 @@ done
 for f in "$HOME"/.config/shell/bash.d/*.bash; do
   [ -r "$f" ] && . "$f"
 done
-
-# load completions
-for f in "$HOME"/.config/bash/completions.d/*.bash; do
-  [ -r "$f" ] && . "$f"
-done

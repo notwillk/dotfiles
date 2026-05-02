@@ -1,0 +1,6 @@
+HISTCONTROL=ignoreboth
+HISTSIZE=10000
+HISTFILESIZE=20000
+
+shopt -s histappend
+shopt -s checkwinsize

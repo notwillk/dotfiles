@@ -12,8 +12,3 @@ done
 for f in ~/.config/shell/zsh.d/*.zsh(N); do
   source "$f"
 done
-
-# completions (makes dir "meaningful")
-fpath=(~/.config/zsh/completions.d $fpath)
-autoload -Uz compinit
-compinit
