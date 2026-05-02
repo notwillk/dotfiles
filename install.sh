@@ -63,6 +63,9 @@ fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_SOURCE_PATH="${REPO_ROOT}/home"
+INITIAL_FILES_SOURCE_PATH="${REPO_ROOT}/initial-files"
+DOTFILES_STATE_PATH="${HOME}/.dotfiles"
+BACKUP_PATH="${DOTFILES_STATE_PATH}/backups"
 CODEX_SOURCE_PATH="${DOTFILES_SOURCE_PATH}/.codex"
 CODEX_TARGET_PATH="${HOME}/.codex"
 
@@ -70,6 +73,18 @@ if [[ ! -d "${DOTFILES_SOURCE_PATH}" ]]; then
   log "Expected Stow package directory '${DOTFILES_SOURCE_PATH}' does not exist." >&2
   exit 1
 fi
+
+backup_target() {
+  local target_file="$1"
+  local backup_name="${target_file#"${HOME}/"}"
+  local backup_file="${BACKUP_PATH}/${backup_name}.backup.$(date +%Y%m%d%H%M%S).$$"
+  local backup_dir
+  backup_dir="$(dirname "${backup_file}")"
+
+  mkdir -p "${backup_dir}"
+  mv "${target_file}" "${backup_file}"
+  printf '%s\n' "${backup_file}"
+}
 
 link_codex_config() {
   local source_file="${CODEX_SOURCE_PATH}/config.toml"
@@ -95,8 +110,8 @@ link_codex_config() {
       return
     fi
 
-    local backup_file="${target_file}.backup.$(date +%Y%m%d%H%M%S).$$"
-    mv "${target_file}" "${backup_file}"
+    local backup_file
+    backup_file="$(backup_target "${target_file}")"
     log "Backed up existing Codex config link to '${backup_file}'."
   elif [[ -e "${target_file}" ]]; then
     if [[ -d "${target_file}" ]]; then
@@ -104,13 +119,42 @@ link_codex_config() {
       exit 1
     fi
 
-    local backup_file="${target_file}.backup.$(date +%Y%m%d%H%M%S).$$"
-    mv "${target_file}" "${backup_file}"
+    local backup_file
+    backup_file="$(backup_target "${target_file}")"
     log "Backed up existing Codex config to '${backup_file}'."
   fi
 
   ln -s "${source_file}" "${target_file}"
   log "Linked Codex config: ${target_file} -> ${source_file}"
+}
+
+copy_initial_files() {
+  if [[ ! -d "${INITIAL_FILES_SOURCE_PATH}" ]]; then
+    return
+  fi
+
+  while IFS= read -r -d '' source_file; do
+    local relative_path="${source_file#"${INITIAL_FILES_SOURCE_PATH}/"}"
+    local target_file="${HOME}/${relative_path}"
+    local target_dir
+    target_dir="$(dirname "${target_file}")"
+
+    mkdir -p "${target_dir}"
+
+    if [[ -e "${target_file}" || -L "${target_file}" ]]; then
+      if [[ -d "${target_file}" && ! -L "${target_file}" ]]; then
+        log "Cannot install initial file because '${target_file}' is a directory." >&2
+        exit 1
+      fi
+
+      local backup_file
+      backup_file="$(backup_target "${target_file}")"
+      log "Backed up existing initial file to '${backup_file}'."
+    fi
+
+    cp "${source_file}" "${target_file}"
+    log "Installed initial file: ${target_file}"
+  done < <(find "${INITIAL_FILES_SOURCE_PATH}" -type f -print0 | sort -z)
 }
 
 if command -v stow >/dev/null 2>&1; then
@@ -213,6 +257,8 @@ STOW_COMMAND=(
   "${STOW_PACKAGE}"
 )
 
+mkdir -p "${DOTFILES_STATE_PATH}" "${BACKUP_PATH}"
+copy_initial_files
 log "Linking '${DOTFILES_SOURCE_PATH}' into '${HOME}'..."
 printf -v STOW_COMMAND_DISPLAY "%q " "${STOW_COMMAND[@]}"
 log "Running \`${STOW_COMMAND_DISPLAY% }\`..."
