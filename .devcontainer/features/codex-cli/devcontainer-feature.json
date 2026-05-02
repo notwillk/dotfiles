@@ -1,0 +1,10 @@
+{
+  "name": "Codex CLI",
+  "id": "codex-cli",
+  "version": "1.0.0",
+  "description": "Installs the codex CLI",
+  "dependsOn": {
+    "ghcr.io/fjktkm/devcontainer-features/agent-persistence:latest": {},
+    "ghcr.io/notwillk/devcontainer-features/node:1": {}
+  }
+}

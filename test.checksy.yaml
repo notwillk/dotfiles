@@ -1,4 +1,0 @@
-rules:
-  - name: placeholder
-    check: echo "Test..."
-    severity: error

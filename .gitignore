@@ -2,25 +2,5 @@
 .DS_Store
 Thumbs.db
 
-# Editors
-.idea/
-*.swp
-*.swo
-
-# Build output
-dist/
-build/
-out/
-
-# Dependencies
-node_modules/
-vendor/
-
 # Temp directory
-.tmp/
-
-# Schemas
-.schemas/*.schema.json
-
-# Checksy cache
-.checksy-cache
+tmp/
