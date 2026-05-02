@@ -63,11 +63,55 @@ fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_SOURCE_PATH="${REPO_ROOT}/home"
+CODEX_SOURCE_PATH="${DOTFILES_SOURCE_PATH}/.codex"
+CODEX_TARGET_PATH="${HOME}/.codex"
 
 if [[ ! -d "${DOTFILES_SOURCE_PATH}" ]]; then
   log "Expected Stow package directory '${DOTFILES_SOURCE_PATH}' does not exist." >&2
   exit 1
 fi
+
+link_codex_config() {
+  local source_file="${CODEX_SOURCE_PATH}/config.toml"
+  local target_file="${CODEX_TARGET_PATH}/config.toml"
+
+  if [[ ! -f "${source_file}" ]]; then
+    return
+  fi
+
+  if [[ -e "${CODEX_TARGET_PATH}" && ! -d "${CODEX_TARGET_PATH}" ]]; then
+    log "Cannot link Codex config because '${CODEX_TARGET_PATH}' exists but is not a directory." >&2
+    exit 1
+  fi
+
+  mkdir -p "${CODEX_TARGET_PATH}"
+
+  if [[ -L "${target_file}" ]]; then
+    local current_target
+    current_target="$(readlink "${target_file}")"
+
+    if [[ "${current_target}" == "${source_file}" ]]; then
+      log "Codex config is already linked: ${target_file}"
+      return
+    fi
+
+    local backup_file="${target_file}.backup.$(date +%Y%m%d%H%M%S).$$"
+    mv "${target_file}" "${backup_file}"
+    log "Backed up existing Codex config link to '${backup_file}'."
+  elif [[ -e "${target_file}" ]]; then
+    if [[ -d "${target_file}" ]]; then
+      log "Cannot link Codex config because '${target_file}' is a directory." >&2
+      exit 1
+    fi
+
+    local backup_file="${target_file}.backup.$(date +%Y%m%d%H%M%S).$$"
+    mv "${target_file}" "${backup_file}"
+    log "Backed up existing Codex config to '${backup_file}'."
+  fi
+
+  ln -s "${source_file}" "${target_file}"
+  log "Linked Codex config: ${target_file} -> ${source_file}"
+}
 
 if command -v stow >/dev/null 2>&1; then
   log "GNU Stow is installed: $(command -v stow)"
@@ -163,7 +207,7 @@ STOW_VERBOSITY="${STOW_VERBOSITY:-${VERBOCITY:-1}}"
 STOW_COMMAND=(
   stow
   "--verbose=${STOW_VERBOSITY}"
-  --restow
+  --stow
   --dir "${REPO_ROOT}"
   --target "${HOME}"
   "${STOW_PACKAGE}"
@@ -173,6 +217,7 @@ log "Linking '${DOTFILES_SOURCE_PATH}' into '${HOME}'..."
 printf -v STOW_COMMAND_DISPLAY "%q " "${STOW_COMMAND[@]}"
 log "Running \`${STOW_COMMAND_DISPLAY% }\`..."
 prepend "[stow]" "${STOW_COMMAND[@]}"
+link_codex_config
 log "Dotfiles successfully linked."
 log "Make updates to ${GIT_PATH}"
 log "Uninstall by running \`${REPO_ROOT}/uninstall.sh\`"

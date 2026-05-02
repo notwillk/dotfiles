@@ -1,0 +1,34 @@
+model = "gpt-5.5"
+  model_provider = "openai"
+
+  # Ask before doing things that need extra permission.
+  # This helps prevent surprise system-level changes.
+  approval_policy = "on-request"
+
+  # Allow Codex to edit files in the project directory where it was started.
+  # It should not be able to freely edit the rest of the machine.
+  sandbox_mode = "workspace-write"
+
+  model_reasoning_effort = "medium"
+  model_reasoning_summary = "auto"
+  model_verbosity = "medium"
+
+  # Only pass through basic shell environment values.
+  # Do not add API keys, tokens, cloud credentials, or SSH agent variables here
+  # unless you intentionally want Codex commands to access them.
+  [shell_environment_policy]
+  inherit = "core"
+  include = ["PATH", "HOME", "SHELL", "TERM", "USER", "LOGNAME", "LANG", "LC_ALL", "EDITOR", "VISUAL"]
+
+  # Use this profile when opening code you do not trust.
+  # Codex can inspect files, but should not edit them.
+  [profiles.untrusted]
+  approval_policy = "untrusted"
+  sandbox_mode = "read-only"
+
+  # Use this profile when a task needs more careful reasoning.
+  # It may be slower.
+  [profiles.focused]
+  model_reasoning_effort = "high"
+  model_verbosity = "high"
+  

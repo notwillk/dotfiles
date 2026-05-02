@@ -25,6 +25,14 @@
       "resolved": "ghcr.io/notwillk/devcontainer-features/node@sha256:61578b67777945d792dd1ebfb8260f4e89ee7ff5c4a62d5475a8749ebaa75a65",
       "integrity": "sha256:61578b67777945d792dd1ebfb8260f4e89ee7ff5c4a62d5475a8749ebaa75a65"
     },
+    "ghcr.io/notwillk/devcontainer-features/skills": {
+      "version": "1.0.0",
+      "resolved": "ghcr.io/notwillk/devcontainer-features/skills@sha256:b6fabdcc14f7f447e05134110882c922e55acf0f3b1d22e4df70c463d21b6915",
+      "integrity": "sha256:b6fabdcc14f7f447e05134110882c922e55acf0f3b1d22e4df70c463d21b6915",
+      "dependsOn": [
+        "ghcr.io/notwillk/devcontainer-features/node:1"
+      ]
+    },
     "ghcr.io/notwillk/devcontainer-features/stow": {
       "version": "1.0.0",
       "resolved": "ghcr.io/notwillk/devcontainer-features/stow@sha256:4d377d5cdefb4397df01962c4a0634adaf8fd356771ab479f328080097b25c64",

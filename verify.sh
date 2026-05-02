@@ -65,11 +65,37 @@ fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_SOURCE_PATH="${REPO_ROOT}/home"
+CODEX_SOURCE_PATH="${DOTFILES_SOURCE_PATH}/.codex"
+CODEX_TARGET_PATH="${HOME}/.codex"
 
 if [[ ! -d "${DOTFILES_SOURCE_PATH}" ]]; then
   log "Expected Stow package directory '${DOTFILES_SOURCE_PATH}' does not exist." >&2
   exit 1
 fi
+
+verify_codex_config() {
+  local source_file="${CODEX_SOURCE_PATH}/config.toml"
+  local target_file="${CODEX_TARGET_PATH}/config.toml"
+
+  if [[ ! -f "${source_file}" ]]; then
+    return
+  fi
+
+  if [[ ! -L "${target_file}" ]]; then
+    log "Codex config is not linked: ${target_file}" >&2
+    return 1
+  fi
+
+  local current_target
+  current_target="$(readlink "${target_file}")"
+
+  if [[ "${current_target}" != "${source_file}" ]]; then
+    log "Codex config points to '${current_target}', expected '${source_file}'." >&2
+    return 1
+  fi
+
+  log "Codex config is correctly linked: ${target_file}"
+}
 
 if ! command -v stow >/dev/null 2>&1; then
   log "GNU Stow is not installed. Cannot verify Stow-managed symlinks." >&2
@@ -116,6 +142,11 @@ STOW_ACTION_OUTPUT="$(
 if [[ -n "${STOW_ACTION_OUTPUT}" ]]; then
   log "Dotfiles are not fully linked. The simulated Stow run above shows pending changes." >&2
   log "Run '${REPO_ROOT}/install.sh' to apply them." >&2
+  exit 1
+fi
+
+if ! verify_codex_config; then
+  log "Dotfiles are not fully linked. Run '${REPO_ROOT}/install.sh' to apply them." >&2
   exit 1
 fi
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "GNU Stow"
+  short_description: "Manage symlink farms and dotfiles with GNU Stow."
+  default_prompt: "Help me use GNU Stow safely for packages, symlink farms, and dotfile management."

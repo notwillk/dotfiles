@@ -59,11 +59,33 @@ fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_SOURCE_PATH="${REPO_ROOT}/home"
+CODEX_SOURCE_PATH="${DOTFILES_SOURCE_PATH}/.codex"
+CODEX_TARGET_PATH="${HOME}/.codex"
 
 if [[ ! -d "${DOTFILES_SOURCE_PATH}" ]]; then
   log "Expected Stow package directory '${DOTFILES_SOURCE_PATH}' does not exist." >&2
   exit 1
 fi
+
+unlink_codex_config() {
+  local source_file="${CODEX_SOURCE_PATH}/config.toml"
+  local target_file="${CODEX_TARGET_PATH}/config.toml"
+
+  if [[ ! -L "${target_file}" ]]; then
+    return
+  fi
+
+  local current_target
+  current_target="$(readlink "${target_file}")"
+
+  if [[ "${current_target}" != "${source_file}" ]]; then
+    log "Leaving Codex config in place because '${target_file}' points to '${current_target}'." >&2
+    return
+  fi
+
+  rm "${target_file}"
+  log "Removed Codex config link: ${target_file}"
+}
 
 if ! command -v stow >/dev/null 2>&1; then
   log "GNU Stow is not installed. Cannot remove Stow-managed symlinks." >&2
@@ -84,6 +106,7 @@ STOW_COMMAND=(
   "${STOW_PACKAGE}"
 )
 
+unlink_codex_config
 log "Removing links from '${DOTFILES_SOURCE_PATH}' in '${HOME}'..."
 printf -v STOW_COMMAND_DISPLAY "%q " "${STOW_COMMAND[@]}"
 log "Running \`${STOW_COMMAND_DISPLAY% }\`..."
