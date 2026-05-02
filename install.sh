@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+INSTALL_LOG_PATH="/tmp/dotfiles-install.log"
+: >"${INSTALL_LOG_PATH}"
+exec > >(tee -a "${INSTALL_LOG_PATH}") 2>&1
+
 on_exit() {
   local status="$?"
 
