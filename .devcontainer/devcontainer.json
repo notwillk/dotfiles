@@ -6,7 +6,6 @@
     "./features/codex-cli": {},
     "ghcr.io/devcontainers/features/docker-in-docker": {},
     "ghcr.io/notwillk/devcontainer-features/github-cli": {},
-    "ghcr.io/notwillk/devcontainer-features/skills": {},
     "ghcr.io/notwillk/devcontainer-features/stow": {}
 
   },
