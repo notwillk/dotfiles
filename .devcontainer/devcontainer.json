@@ -3,7 +3,6 @@
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
   "features": {
     "./features/bubblewrap": {},
-    "./features/codex-cli": {},
     "ghcr.io/devcontainers/features/docker-in-docker": {},
     "ghcr.io/notwillk/devcontainer-features/github-cli": {},
     "ghcr.io/notwillk/devcontainer-features/stow": {}
