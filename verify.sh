@@ -99,7 +99,7 @@ verify_codex_config() {
 
 if ! command -v stow >/dev/null 2>&1; then
   log "GNU Stow is not installed. Cannot verify Stow-managed symlinks." >&2
-  log "Run '${REPO_ROOT}/install.sh' first." >&2
+  log "Run '${HOME}/.dof/bin/dof apply' first." >&2
   exit 1
 fi
 
@@ -141,12 +141,12 @@ STOW_ACTION_OUTPUT="$(
 
 if [[ -n "${STOW_ACTION_OUTPUT}" ]]; then
   log "Dotfiles are not fully linked. The simulated Stow run above shows pending changes." >&2
-  log "Run '${REPO_ROOT}/install.sh' to apply them." >&2
+  log "Run '${HOME}/.dof/bin/dof apply' to apply them." >&2
   exit 1
 fi
 
 if ! verify_codex_config; then
-  log "Dotfiles are not fully linked. Run '${REPO_ROOT}/install.sh' to apply them." >&2
+  log "Dotfiles are not fully linked. Run '${HOME}/.dof/bin/dof apply' to apply them." >&2
   exit 1
 fi
 
