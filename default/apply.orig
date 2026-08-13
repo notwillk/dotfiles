@@ -1,0 +1,344 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+INSTALL_LOG_PATH="/tmp/dotfiles-apply.log"
+: >"${INSTALL_LOG_PATH}"
+exec > >(tee -a "${INSTALL_LOG_PATH}") 2>&1
+
+on_exit() {
+  local status="$?"
+
+  if [[ "${status}" -ne 0 ]]; then
+    printf '[default/apply] Exiting with %s code\n' "${status}" >&2
+  fi
+}
+
+trap on_exit EXIT
+
+prepend() {
+  local prefix="$1"; shift
+
+  # pick strategy
+  if command -v stdbuf >/dev/null 2>&1; then
+    # Linux: force line buffering
+    stdbuf -oL -eL "$@" 2>&1 | awk -v p="$prefix" '{ print p " " $0; fflush(); }'
+  elif command -v script >/dev/null 2>&1; then
+    # cross-platform fallback (macOS, etc.)
+    script -q /dev/null "$@" 2>&1 | awk -v p="$prefix" '{ print p " " $0; fflush(); }'
+  else
+    # last resort (no buffering guarantees)
+    "$@" 2>&1 | awk -v p="$prefix" '{ print p " " $0; fflush(); }'
+  fi
+}
+
+log() {
+  prepend "[default/apply]" echo "$@"
+}
+
+echo "              _            _ _ _ _          _       _    __ _ _           "
+echo "  _ __   ___ | |___      _(_) | | | __   __| | ___ | |_ / _(_) | ___  ___ "
+echo " | '_ \ / _ \| __\ \ /\ / / | | | |/ /  / _\` |/ _ \| __| |_| | |/ _ \/ __|"
+echo " | | | | (_) | |_ \ V  V /| | | |   <  | (_| | (_) | |_|  _| | |  __/\__ \\"
+echo " |_| |_|\___/ \__| \_/\_/ |_|_|_|_|\_\  \__,_|\___/ \__|_| |_|_|\___||___/"
+echo "                                                                          "
+
+if [[ -z "${HOME:-}" ]]; then
+  log "HOME is not set. Refusing to continue because dotfiles must target a known home directory." >&2
+  log "Run this script as the user whose home directory should be managed, without clearing HOME." >&2
+  exit 1
+fi
+
+if [[ ! -d "${HOME}" ]]; then
+  log "HOME is set to '${HOME}', but that directory does not exist." >&2
+  log "Run this script with HOME set to the current user's home directory." >&2
+  exit 1
+fi
+
+ACCOUNT_HOME=""
+if command -v getent >/dev/null 2>&1; then
+  ACCOUNT_HOME="$(getent passwd "$(id -un)" | cut -d: -f6 || true)"
+elif command -v dscl >/dev/null 2>&1; then
+  ACCOUNT_HOME="$(dscl . -read "/Users/$(id -un)" NFSHomeDirectory 2>/dev/null | awk '{print $2}' || true)"
+fi
+
+if [[ -n "${ACCOUNT_HOME}" && "${HOME}" != "${ACCOUNT_HOME}" ]]; then
+  log Warning: "HOME is set to '${HOME}', but the current user's home directory is '${ACCOUNT_HOME}'." >&2
+fi
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DOTFILES_SOURCE_PATH="${REPO_ROOT}/home"
+INITIAL_FILES_SOURCE_PATH="${REPO_ROOT}/initial-files"
+DOTFILES_STATE_PATH="${HOME}/.dotfiles"
+BACKUP_PATH="${DOTFILES_STATE_PATH}/backups"
+CODEX_SOURCE_PATH="${DOTFILES_SOURCE_PATH}/.codex"
+CODEX_TARGET_PATH="${HOME}/.codex"
+
+if [[ ! -d "${DOTFILES_SOURCE_PATH}" ]]; then
+  log "Expected Stow package directory '${DOTFILES_SOURCE_PATH}' does not exist." >&2
+  exit 1
+fi
+
+backup_target() {
+  local target_file="$1"
+  local backup_name="${target_file#"${HOME}/"}"
+  local backup_file="${BACKUP_PATH}/${backup_name}.backup.$(date +%Y%m%d%H%M%S).$$"
+  local backup_dir
+  backup_dir="$(dirname "${backup_file}")"
+
+  mkdir -p "${backup_dir}"
+  mv "${target_file}" "${backup_file}"
+  printf '%s\n' "${backup_file}"
+}
+
+link_codex_config() {
+  local source_file="${CODEX_SOURCE_PATH}/config.toml"
+  local target_file="${CODEX_TARGET_PATH}/config.toml"
+
+  if [[ ! -f "${source_file}" ]]; then
+    return
+  fi
+
+  if [[ -e "${CODEX_TARGET_PATH}" && ! -d "${CODEX_TARGET_PATH}" ]]; then
+    log "Cannot link Codex config because '${CODEX_TARGET_PATH}' exists but is not a directory." >&2
+    exit 1
+  fi
+
+  mkdir -p "${CODEX_TARGET_PATH}"
+
+  if [[ -L "${target_file}" ]]; then
+    local current_target
+    current_target="$(readlink "${target_file}")"
+
+    if [[ "${current_target}" == "${source_file}" ]]; then
+      log "Codex config is already linked: ${target_file}"
+      return
+    fi
+
+    local backup_file
+    backup_file="$(backup_target "${target_file}")"
+    log "Backed up existing Codex config link to '${backup_file}'."
+  elif [[ -e "${target_file}" ]]; then
+    if [[ -d "${target_file}" ]]; then
+      log "Cannot link Codex config because '${target_file}' is a directory." >&2
+      exit 1
+    fi
+
+    local backup_file
+    backup_file="$(backup_target "${target_file}")"
+    log "Backed up existing Codex config to '${backup_file}'."
+  fi
+
+  ln -s "${source_file}" "${target_file}"
+  log "Linked Codex config: ${target_file} -> ${source_file}"
+}
+
+copy_initial_files() {
+  if [[ ! -d "${INITIAL_FILES_SOURCE_PATH}" ]]; then
+    return
+  fi
+
+  while IFS= read -r -d '' source_file; do
+    local relative_path="${source_file#"${INITIAL_FILES_SOURCE_PATH}/"}"
+    local target_file="${HOME}/${relative_path}"
+    local target_dir
+    target_dir="$(dirname "${target_file}")"
+
+    mkdir -p "${target_dir}"
+
+    if [[ -e "${target_file}" || -L "${target_file}" ]]; then
+      if [[ -d "${target_file}" && ! -L "${target_file}" ]]; then
+        log "Cannot install initial file because '${target_file}' is a directory." >&2
+        exit 1
+      fi
+
+      local backup_file
+      backup_file="$(backup_target "${target_file}")"
+      log "Backed up existing initial file to '${backup_file}'."
+    fi
+
+    cp "${source_file}" "${target_file}"
+    log "Installed initial file: ${target_file}"
+  done < <(find "${INITIAL_FILES_SOURCE_PATH}" -type f -print0 | sort -z)
+}
+
+if command -v stow >/dev/null 2>&1; then
+  log "GNU Stow is installed: $(command -v stow)"
+else
+  SUDO=()
+
+  require_sudo() {
+    if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+      SUDO=()
+    elif command -v sudo >/dev/null 2>&1; then
+      SUDO=(sudo)
+    else
+      log "GNU Stow is not installed, and sudo is unavailable." >&2
+      log "Please install GNU Stow manually or run this script as root." >&2
+      exit 1
+    fi
+  }
+
+  install_with() {
+    local manager="$1"
+
+    log "GNU Stow is not installed. Installing with ${manager}..."
+
+    case "${manager}" in
+      brew)
+        brew install stow
+        ;;
+      apt-get)
+        require_sudo
+        "${SUDO[@]}" apt-get update
+        "${SUDO[@]}" apt-get install -y stow
+        ;;
+      apt)
+        require_sudo
+        "${SUDO[@]}" apt update
+        "${SUDO[@]}" apt install -y stow
+        ;;
+      dnf)
+        require_sudo
+        "${SUDO[@]}" dnf install -y stow
+        ;;
+      yum)
+        require_sudo
+        "${SUDO[@]}" yum install -y stow
+        ;;
+      pacman)
+        require_sudo
+        "${SUDO[@]}" pacman -Sy --noconfirm stow
+        ;;
+      zypper)
+        require_sudo
+        "${SUDO[@]}" zypper --non-interactive install stow
+        ;;
+      apk)
+        require_sudo
+        "${SUDO[@]}" apk add stow
+        ;;
+      xbps-install)
+        require_sudo
+        "${SUDO[@]}" xbps-install -Sy stow
+        ;;
+      pkg)
+        require_sudo
+        "${SUDO[@]}" pkg install -y stow
+        ;;
+      *)
+        log "Unsupported package manager: ${manager}" >&2
+        exit 1
+        ;;
+    esac
+  }
+
+  for manager in brew apt-get apt dnf yum pacman zypper apk xbps-install pkg; do
+    if command -v "${manager}" >/dev/null 2>&1; then
+      install_with "${manager}"
+      break
+    fi
+  done
+
+  if ! command -v stow >/dev/null 2>&1; then
+    log "Failed to install GNU Stow." >&2
+    log "Supported managers: brew, apt-get, apt, dnf, yum, pacman, zypper, apk, xbps-install, pkg." >&2
+    exit 1
+  fi
+
+  log "GNU Stow installed: $(command -v stow)"
+fi
+
+resolve_link_target() {
+  local link_path="$1"
+  local link_target
+  local candidate
+  local candidate_dir
+
+  link_target="$(readlink "${link_path}")"
+  if [[ "${link_target}" = /* ]]; then
+    candidate="${link_target}"
+  else
+    candidate="$(dirname "${link_path}")/${link_target}"
+  fi
+
+  candidate_dir="$(cd -P "$(dirname "${candidate}")" 2>/dev/null && pwd)" || return 1
+  printf '%s/%s\n' "${candidate_dir}" "$(basename "${candidate}")"
+}
+
+handoff_legacy_checkout() {
+  local marker="${HOME}/managed_by_dofiles.md"
+  local current_marker="${DOTFILES_SOURCE_PATH}/managed_by_dofiles.md"
+  local legacy_marker
+  local legacy_root
+  local legacy_codex_source
+  local codex_target="${CODEX_TARGET_PATH}/config.toml"
+  local codex_source=""
+
+  if [[ ! -L "${marker}" ]]; then
+    return
+  fi
+
+  legacy_marker="$(resolve_link_target "${marker}")" || {
+    log "CRITICAL: Cannot resolve legacy marker link '${marker}'; refusing to alter it." >&2
+    return 1
+  }
+
+  if [[ "${legacy_marker}" == "${current_marker}" ]]; then
+    return
+  fi
+
+  if [[ "${legacy_marker}" != */home/managed_by_dofiles.md ]]; then
+    log "CRITICAL: Marker '${marker}' points outside a recognizable dotfiles checkout: '${legacy_marker}'." >&2
+    log "Remove or migrate that link manually before retrying dof apply." >&2
+    return 1
+  fi
+
+  legacy_root="${legacy_marker%/home/managed_by_dofiles.md}"
+  if [[ ! -d "${legacy_root}/home" || ! -f "${legacy_marker}" ]]; then
+    log "CRITICAL: Legacy checkout '${legacy_root}' is incomplete; refusing automatic handoff." >&2
+    return 1
+  fi
+
+  log "Handing off Stow links from legacy checkout '${legacy_root}'."
+
+  if [[ -L "${codex_target}" ]]; then
+    codex_source="$(resolve_link_target "${codex_target}" || true)"
+    legacy_codex_source="${legacy_root}/home/.codex/config.toml"
+    if [[ "${codex_source}" == "${legacy_codex_source}" ]]; then
+      rm "${codex_target}"
+      log "Removed legacy Codex config link: ${codex_target}"
+    fi
+  fi
+
+  prepend "[stow:legacy]" stow \
+    "--verbose=${STOW_VERBOSITY:-${VERBOCITY:-1}}" \
+    --delete \
+    --dir "${legacy_root}" \
+    --target "${HOME}" \
+    home
+}
+
+GIT_PATH="git@github.com:notwillk/dotfiles.git"
+
+STOW_PACKAGE="${DOTFILES_SOURCE_PATH#"${REPO_ROOT}/"}"
+STOW_VERBOSITY="${STOW_VERBOSITY:-${VERBOCITY:-1}}"
+STOW_COMMAND=(
+  stow
+  "--verbose=${STOW_VERBOSITY}"
+  --restow
+  --dir "${REPO_ROOT}"
+  --target "${HOME}"
+  "${STOW_PACKAGE}"
+)
+
+mkdir -p "${DOTFILES_STATE_PATH}" "${BACKUP_PATH}"
+handoff_legacy_checkout
+copy_initial_files
+log "Linking '${DOTFILES_SOURCE_PATH}' into '${HOME}'..."
+printf -v STOW_COMMAND_DISPLAY "%q " "${STOW_COMMAND[@]}"
+log "Running \`${STOW_COMMAND_DISPLAY% }\`..."
+prepend "[stow]" "${STOW_COMMAND[@]}"
+link_codex_config
+log "Dotfiles successfully linked from the dof workspace."
+log "Make updates in ${REPO_ROOT} and push them to ${GIT_PATH}."
+log "Uninstall links by running \`${REPO_ROOT}/uninstall.sh\`."

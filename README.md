@@ -1,7 +1,7 @@
 # Dotfiles
 
-Personal dotfiles managed with Git and GNU Stow.
+Personal dotfiles orchestrated by [dof](https://github.com/notwillk/dof).
 
-The human-facing recovery and update notes live in
-`home/managed_by_dofiles.md`, because that file is installed into managed home
-directories.
+The transitional `default` feature uses GNU Stow to link the existing `home/`
+payload and preserves the copied `initial-files/` behavior. Human-facing update
+and recovery notes are installed as `managed_by_dofiles.md`.

@@ -2,135 +2,72 @@
 
 Guidance for agents working in this dotfiles repo.
 
-## Repo Purpose
+## Architecture
 
-This repository manages a user home directory with GNU Stow.
+Dof owns bootstrap, workspace selection, and feature execution. The only
+intentional dof declaration is the executable `default/apply` hook.
 
-The Stow package is `home/`. Files under `home/` are intended to appear under
-`$HOME` after install. For example:
+This is a transitional architecture: `default/apply` installs GNU Stow when
+needed, copies `initial-files/`, and Stows `home/` into the target `$HOME`.
+Do not convert payload files to native dof ownership unless explicitly asked.
 
-- `home/managed_by_dofiles.md` maps to `$HOME/managed_by_dofiles.md`
-- `home/.agents/skills/...` maps to `$HOME/.agents/skills/...`
+The canonical checkout is `$HOME/.dof/workspace`. Files under `home/` map to
+the same relative path beneath `$HOME`; files under `initial-files/` are
+copied as regular files.
 
-Do not assume the target home directory is this repo or this dev container. The
-scripts are designed to work against any valid `$HOME`.
+## Lifecycle
 
-## Lifecycle Scripts
+- `./install.sh` bootstraps `$HOME/.dof/bin/dof`, clones this repository, and
+  runs `dof apply`.
+- `default/apply` is the idempotent feature hook and underlying installer.
+- `verify.sh` simulates Stow and checks the special Codex config link.
+- `uninstall.sh` removes Stow-owned links and the exact managed Codex link.
 
-Use the root scripts rather than hand-running Stow in normal work:
+Normal maintenance is:
 
-- `./install.sh`
-- `./verify.sh`
-- `./uninstall.sh`
-
-`install.sh`:
-
-- validates `$HOME`
-- ensures GNU Stow is installed
-- stows the `home` package into `$HOME`
-- links `home/.codex/config.toml` into `$HOME/.codex/config.toml` explicitly
-
-`verify.sh`:
-
-- uses `stow --simulate` to check whether the `home` package is fully linked
-- verifies `$HOME/.codex/config.toml` points at this repo
-- exits nonzero if anything is missing, conflicting, or unmanaged
-
-`uninstall.sh`:
-
-- removes Stow-managed links from `$HOME`
-- removes the Codex config link only when it points at this repo
-- does not uninstall GNU Stow
-
-## Stow Ignore Rules
-
-Stow ignore rules live in:
-
-```text
-home/.stow-local-ignore
+```sh
+git -C "$HOME/.dof/workspace" pull --ff-only
+"$HOME/.dof/bin/dof" apply
 ```
 
-This file must stay inside the top-level Stow package directory. A repo-root
-`.stow-local-ignore` will not apply to the `home` package.
+Uninstall deliberately leaves initial files, backups, GNU Stow,
+`$HOME/.dof/bin/dof`, and the dof workspace/config in place.
 
-The scripts intentionally do not pass `--ignore` flags. Prefer editing
-`home/.stow-local-ignore` when Stow should skip package paths.
+## Stow and Codex Rules
 
-## Special Codex Config Handling
+Stow ignore rules remain in `home/.stow-local-ignore`. Do not move them to the
+repository root or replace them with command-line ignore flags.
 
-`home/.codex/config.toml` is not managed directly by Stow.
+`home/.codex/config.toml` remains outside Stow because `$HOME/.codex` may be
+a real directory or a directory symlink. The apply hook backs up an unmanaged
+leaf and creates the exact config symlink. Uninstall removes it only when it
+points into the active workspace.
 
-Reason: many environments already have `$HOME/.codex` as a real directory or an
-absolute symlink. Stow can conflict with that and may print absolute-symlink bug
-messages.
+The apply hook may automatically hand off links from an older checkout. It must
+only unstow a package identified by the installed marker link and must never
+use `stow --adopt`, delete unmanaged files, or use `dof clone --force`.
 
-Instead:
+## Workspace Rules
 
-- Stow ignores `.codex`
-- `install.sh` creates `$HOME/.codex` if needed
-- `install.sh` backs up an unmanaged existing `config.toml`
-- `install.sh` symlinks `$HOME/.codex/config.toml` to this repo
-- `verify.sh` checks that symlink
-- `uninstall.sh` removes only that symlink
+Dof treats real top-level directories as features. For this migration, only
+`default/` may contain dof declarations (`home/`, `snippets.yaml`, or an
+`apply` hook). Existing infrastructure directories are intentionally inert.
 
-Do not replace this with plain Stow handling unless you also handle existing
-`$HOME/.codex` directories and symlinks safely.
+Do not add secrets, tokens, or machine-local credentials to managed payloads.
 
 ## Testing
 
-The Docker test runner is:
+Run:
 
 ```sh
+bash -n install.sh default/apply uninstall.sh verify.sh tests/run.sh
+dof lint .
 tests/run.sh --all
 ```
 
-Run it after changing any lifecycle script, Stow layout, install method, or
-ignore rule.
-
-You can run one case with:
-
-```sh
-tests/run.sh tests/00-devcontainers-ubuntu-stow-installed.Dockerfile
-```
-
-The tests mount this repo read-only and use a temporary `$HOME` inside the
-container.
-
-The expected normal lifecycle is:
-
-1. `verify` fails before install
-2. `install` passes
-3. `verify` passes
-4. `uninstall` passes
-5. `verify` fails after uninstall
-
-The test matrix also covers missing `$HOME`, missing Stow, missing package
-manager, target conflicts, read-only homes, and package-manager detection.
-
-## Safety Rules
-
-- Do not run lifecycle scripts against the real `$HOME` unless that is the
-  intended target.
-- For local checks, prefer an overridden temp home:
-
-  ```sh
-  HOME="$PWD/tmp/test-home" ./install.sh
-  HOME="$PWD/tmp/test-home" ./verify.sh
-  HOME="$PWD/tmp/test-home" ./uninstall.sh
-  ```
-
-- Do not delete user files to resolve Stow conflicts.
-- If an unmanaged target file exists, back it up or fail clearly.
-- Do not uninstall GNU Stow in `uninstall.sh`.
-- Do not add secrets, tokens, or machine-local credentials to `home/`.
-
-## Commit Notes
-
-Before committing lifecycle changes, run:
-
-```sh
-bash -n install.sh uninstall.sh verify.sh tests/run.sh
-tests/run.sh --all
-```
+The Docker tests use isolated temporary homes and local repository snapshots;
+they must never install into the real `$HOME`. They cover package-manager
+selection, bootstrap delegation, dof apply, Stow ownership, legacy handoff,
+backups, conflicts, verification, and uninstall behavior.
 
 If Docker is unavailable, state that clearly in the final message.

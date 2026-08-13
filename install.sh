@@ -1,273 +1,38 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-INSTALL_LOG_PATH="/tmp/dotfiles-install.log"
-: >"${INSTALL_LOG_PATH}"
-exec > >(tee -a "${INSTALL_LOG_PATH}") 2>&1
+DOF_INSTALL_URL="https://raw.githubusercontent.com/notwillk/dof/main/scripts/install.sh"
+DOTFILES_REPOSITORY="https://github.com/notwillk/dotfiles.git"
 
-on_exit() {
-  local status="$?"
-
-  if [[ "${status}" -ne 0 ]]; then
-    printf '[install.sh] Exiting with %s code\n' "${status}" >&2
-  fi
+fail() {
+  printf '[install.sh] CRITICAL: %s\n' "$*" >&2
+  exit 1
 }
-
-trap on_exit EXIT
-
-prepend() {
-  local prefix="$1"; shift
-
-  # pick strategy
-  if command -v stdbuf >/dev/null 2>&1; then
-    # Linux: force line buffering
-    stdbuf -oL -eL "$@" 2>&1 | awk -v p="$prefix" '{ print p " " $0; fflush(); }'
-  elif command -v script >/dev/null 2>&1; then
-    # cross-platform fallback (macOS, etc.)
-    script -q /dev/null "$@" 2>&1 | awk -v p="$prefix" '{ print p " " $0; fflush(); }'
-  else
-    # last resort (no buffering guarantees)
-    "$@" 2>&1 | awk -v p="$prefix" '{ print p " " $0; fflush(); }'
-  fi
-}
-
-log() {
-  prepend "[install.sh]" echo "$@"
-}
-
-echo "              _            _ _ _ _          _       _    __ _ _           "
-echo "  _ __   ___ | |___      _(_) | | | __   __| | ___ | |_ / _(_) | ___  ___ "
-echo " | '_ \ / _ \| __\ \ /\ / / | | | |/ /  / _\` |/ _ \| __| |_| | |/ _ \/ __|"
-echo " | | | | (_) | |_ \ V  V /| | | |   <  | (_| | (_) | |_|  _| | |  __/\__ \\"
-echo " |_| |_|\___/ \__| \_/\_/ |_|_|_|_|\_\  \__,_|\___/ \__|_| |_|_|\___||___/"
-echo "                                                                          "
 
 if [[ -z "${HOME:-}" ]]; then
-  log "HOME is not set. Refusing to continue because dotfiles must target a known home directory." >&2
-  log "Run this script as the user whose home directory should be managed, without clearing HOME." >&2
-  exit 1
+  fail "HOME is not set; refusing to install dotfiles without a known target home."
 fi
 
 if [[ ! -d "${HOME}" ]]; then
-  log "HOME is set to '${HOME}', but that directory does not exist." >&2
-  log "Run this script with HOME set to the current user's home directory." >&2
-  exit 1
+  fail "HOME is set to '${HOME}', but that directory does not exist."
 fi
 
-ACCOUNT_HOME=""
-if command -v getent >/dev/null 2>&1; then
-  ACCOUNT_HOME="$(getent passwd "$(id -un)" | cut -d: -f6 || true)"
-elif command -v dscl >/dev/null 2>&1; then
-  ACCOUNT_HOME="$(dscl . -read "/Users/$(id -un)" NFSHomeDirectory 2>/dev/null | awk '{print $2}' || true)"
+DOF_BIN="${HOME}/.dof/bin/dof"
+
+if [[ ! -x "${DOF_BIN}" ]]; then
+  printf '[install.sh] Installing dof into %s...\n' "${HOME}/.dof/bin"
+  curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
+    "${DOF_INSTALL_URL}" | DEST="${HOME}/.dof/bin" sh
 fi
 
-if [[ -n "${ACCOUNT_HOME}" && "${HOME}" != "${ACCOUNT_HOME}" ]]; then
-  log Warning: "HOME is set to '${HOME}', but the current user's home directory is '${ACCOUNT_HOME}'." >&2
+if [[ ! -x "${DOF_BIN}" ]]; then
+  fail "dof installation completed without creating executable '${DOF_BIN}'."
 fi
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DOTFILES_SOURCE_PATH="${REPO_ROOT}/home"
-INITIAL_FILES_SOURCE_PATH="${REPO_ROOT}/initial-files"
-DOTFILES_STATE_PATH="${HOME}/.dotfiles"
-BACKUP_PATH="${DOTFILES_STATE_PATH}/backups"
-CODEX_SOURCE_PATH="${DOTFILES_SOURCE_PATH}/.codex"
-CODEX_TARGET_PATH="${HOME}/.codex"
+printf '[install.sh] Installing dotfiles workspace from %s...\n' "${DOTFILES_REPOSITORY}"
+"${DOF_BIN}" clone "${DOTFILES_REPOSITORY}"
 
-if [[ ! -d "${DOTFILES_SOURCE_PATH}" ]]; then
-  log "Expected Stow package directory '${DOTFILES_SOURCE_PATH}' does not exist." >&2
-  exit 1
-fi
+printf '[install.sh] Applying the default dotfiles feature...\n'
+"${DOF_BIN}" apply
 
-backup_target() {
-  local target_file="$1"
-  local backup_name="${target_file#"${HOME}/"}"
-  local backup_file="${BACKUP_PATH}/${backup_name}.backup.$(date +%Y%m%d%H%M%S).$$"
-  local backup_dir
-  backup_dir="$(dirname "${backup_file}")"
-
-  mkdir -p "${backup_dir}"
-  mv "${target_file}" "${backup_file}"
-  printf '%s\n' "${backup_file}"
-}
-
-link_codex_config() {
-  local source_file="${CODEX_SOURCE_PATH}/config.toml"
-  local target_file="${CODEX_TARGET_PATH}/config.toml"
-
-  if [[ ! -f "${source_file}" ]]; then
-    return
-  fi
-
-  if [[ -e "${CODEX_TARGET_PATH}" && ! -d "${CODEX_TARGET_PATH}" ]]; then
-    log "Cannot link Codex config because '${CODEX_TARGET_PATH}' exists but is not a directory." >&2
-    exit 1
-  fi
-
-  mkdir -p "${CODEX_TARGET_PATH}"
-
-  if [[ -L "${target_file}" ]]; then
-    local current_target
-    current_target="$(readlink "${target_file}")"
-
-    if [[ "${current_target}" == "${source_file}" ]]; then
-      log "Codex config is already linked: ${target_file}"
-      return
-    fi
-
-    local backup_file
-    backup_file="$(backup_target "${target_file}")"
-    log "Backed up existing Codex config link to '${backup_file}'."
-  elif [[ -e "${target_file}" ]]; then
-    if [[ -d "${target_file}" ]]; then
-      log "Cannot link Codex config because '${target_file}' is a directory." >&2
-      exit 1
-    fi
-
-    local backup_file
-    backup_file="$(backup_target "${target_file}")"
-    log "Backed up existing Codex config to '${backup_file}'."
-  fi
-
-  ln -s "${source_file}" "${target_file}"
-  log "Linked Codex config: ${target_file} -> ${source_file}"
-}
-
-copy_initial_files() {
-  if [[ ! -d "${INITIAL_FILES_SOURCE_PATH}" ]]; then
-    return
-  fi
-
-  while IFS= read -r -d '' source_file; do
-    local relative_path="${source_file#"${INITIAL_FILES_SOURCE_PATH}/"}"
-    local target_file="${HOME}/${relative_path}"
-    local target_dir
-    target_dir="$(dirname "${target_file}")"
-
-    mkdir -p "${target_dir}"
-
-    if [[ -e "${target_file}" || -L "${target_file}" ]]; then
-      if [[ -d "${target_file}" && ! -L "${target_file}" ]]; then
-        log "Cannot install initial file because '${target_file}' is a directory." >&2
-        exit 1
-      fi
-
-      local backup_file
-      backup_file="$(backup_target "${target_file}")"
-      log "Backed up existing initial file to '${backup_file}'."
-    fi
-
-    cp "${source_file}" "${target_file}"
-    log "Installed initial file: ${target_file}"
-  done < <(find "${INITIAL_FILES_SOURCE_PATH}" -type f -print0 | sort -z)
-}
-
-if command -v stow >/dev/null 2>&1; then
-  log "GNU Stow is installed: $(command -v stow)"
-else
-  SUDO=()
-
-  require_sudo() {
-    if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
-      SUDO=()
-    elif command -v sudo >/dev/null 2>&1; then
-      SUDO=(sudo)
-    else
-      log "GNU Stow is not installed, and sudo is unavailable." >&2
-      log "Please install GNU Stow manually or run this script as root." >&2
-      exit 1
-    fi
-  }
-
-  install_with() {
-    local manager="$1"
-
-    log "GNU Stow is not installed. Installing with ${manager}..."
-
-    case "${manager}" in
-      brew)
-        brew install stow
-        ;;
-      apt-get)
-        require_sudo
-        "${SUDO[@]}" apt-get update
-        "${SUDO[@]}" apt-get install -y stow
-        ;;
-      apt)
-        require_sudo
-        "${SUDO[@]}" apt update
-        "${SUDO[@]}" apt install -y stow
-        ;;
-      dnf)
-        require_sudo
-        "${SUDO[@]}" dnf install -y stow
-        ;;
-      yum)
-        require_sudo
-        "${SUDO[@]}" yum install -y stow
-        ;;
-      pacman)
-        require_sudo
-        "${SUDO[@]}" pacman -Sy --noconfirm stow
-        ;;
-      zypper)
-        require_sudo
-        "${SUDO[@]}" zypper --non-interactive install stow
-        ;;
-      apk)
-        require_sudo
-        "${SUDO[@]}" apk add stow
-        ;;
-      xbps-install)
-        require_sudo
-        "${SUDO[@]}" xbps-install -Sy stow
-        ;;
-      pkg)
-        require_sudo
-        "${SUDO[@]}" pkg install -y stow
-        ;;
-      *)
-        log "Unsupported package manager: ${manager}" >&2
-        exit 1
-        ;;
-    esac
-  }
-
-  for manager in brew apt-get apt dnf yum pacman zypper apk xbps-install pkg; do
-    if command -v "${manager}" >/dev/null 2>&1; then
-      install_with "${manager}"
-      break
-    fi
-  done
-
-  if ! command -v stow >/dev/null 2>&1; then
-    log "Failed to install GNU Stow." >&2
-    log "Supported managers: brew, apt-get, apt, dnf, yum, pacman, zypper, apk, xbps-install, pkg." >&2
-    exit 1
-  fi
-
-  log "GNU Stow installed: $(command -v stow)"
-fi
-
-GIT_PATH="git@github.com:notwillk/dotfiles.git"
-
-STOW_PACKAGE="${DOTFILES_SOURCE_PATH#"${REPO_ROOT}/"}"
-STOW_VERBOSITY="${STOW_VERBOSITY:-${VERBOCITY:-1}}"
-STOW_COMMAND=(
-  stow
-  "--verbose=${STOW_VERBOSITY}"
-  --stow
-  --dir "${REPO_ROOT}"
-  --target "${HOME}"
-  "${STOW_PACKAGE}"
-)
-
-mkdir -p "${DOTFILES_STATE_PATH}" "${BACKUP_PATH}"
-copy_initial_files
-log "Linking '${DOTFILES_SOURCE_PATH}' into '${HOME}'..."
-printf -v STOW_COMMAND_DISPLAY "%q " "${STOW_COMMAND[@]}"
-log "Running \`${STOW_COMMAND_DISPLAY% }\`..."
-prepend "[stow]" "${STOW_COMMAND[@]}"
-link_codex_config
-log "Dotfiles successfully linked."
-log "Make updates to ${GIT_PATH}"
-log "Uninstall by running \`${REPO_ROOT}/uninstall.sh\`"
+printf '[install.sh] Dotfiles installation completed successfully.\n'
