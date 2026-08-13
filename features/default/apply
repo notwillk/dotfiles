@@ -65,7 +65,7 @@ if [[ -n "${ACCOUNT_HOME}" && "${HOME}" != "${ACCOUNT_HOME}" ]]; then
   log Warning: "HOME is set to '${HOME}', but the current user's home directory is '${ACCOUNT_HOME}'." >&2
 fi
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DOTFILES_SOURCE_PATH="${REPO_ROOT}/home"
 INITIAL_FILES_SOURCE_PATH="${REPO_ROOT}/initial-files"
 DOTFILES_STATE_PATH="${HOME}/.dotfiles"

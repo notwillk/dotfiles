@@ -108,6 +108,8 @@ run_normal_home_test() {
   printf 'unmanaged\n' >"${home}/keep/file"
 
   HOME="${home}" "${DOF_BIN}" clone "${SNAPSHOT_URL}"
+  [[ "$(HOME="${home}" "${DOF_BIN}" features --json)" == '["default"]' ]] ||
+    fail "dof did not discover exactly the default feature"
   HOME="${home}" "${DOF_BIN}" apply
 
   [[ -f "${home}/.bashrc" && ! -L "${home}/.bashrc" ]] ||
@@ -148,7 +150,7 @@ run_legacy_handoff_test() {
   local home="${TEST_ROOT}/legacy-home"
   mkdir -p "${home}"
 
-  HOME="${home}" "${SNAPSHOT}/default/apply"
+  HOME="${home}" "${SNAPSHOT}/features/default/apply"
   assert_link_contains "${home}/managed_by_dofiles.md" "/snapshot/home"
 
   HOME="${home}" "${DOF_BIN}" clone "${SNAPSHOT_URL}"

@@ -220,40 +220,40 @@ run_case() {
 
       run_normal_lifecycle() {
         expect_pass "syntax: install.sh" bash -n ./install.sh
-        expect_pass "syntax: default/apply" bash -n ./default/apply
+        expect_pass "syntax: features/default/apply" bash -n ./features/default/apply
         expect_pass "syntax: uninstall.sh" bash -n ./uninstall.sh
         expect_pass "syntax: verify.sh" bash -n ./verify.sh
         run_dotfile_tests
 
-        expect_fail "install with HOME unset" env -u HOME ./default/apply
+        expect_fail "install with HOME unset" env -u HOME ./features/default/apply
         expect_fail "verify with HOME unset" env -u HOME ./verify.sh
         expect_fail "uninstall with HOME unset" env -u HOME ./uninstall.sh
 
-        expect_fail "install with missing HOME" env HOME=/tmp/does-not-exist ./default/apply
+        expect_fail "install with missing HOME" env HOME=/tmp/does-not-exist ./features/default/apply
         expect_fail "verify with missing HOME" env HOME=/tmp/does-not-exist ./verify.sh
         expect_fail "uninstall with missing HOME" env HOME=/tmp/does-not-exist ./uninstall.sh
 
         mkdir -p /tmp/conflict-home
         printf "not managed by stow\n" > /tmp/conflict-home/managed_by_dofiles.md
-        expect_fail "install with existing target conflict" env HOME=/tmp/conflict-home ./default/apply
+        expect_fail "install with existing target conflict" env HOME=/tmp/conflict-home ./features/default/apply
 
         mkdir -p /tmp/initial-file-directory-conflict/.ssh/config
         expect_fail \
           "install with initial file directory conflict" \
-          env HOME=/tmp/initial-file-directory-conflict ./default/apply
+          env HOME=/tmp/initial-file-directory-conflict ./features/default/apply
 
         mkdir -p /tmp/codex-backup-home/.codex
         printf "local codex config\n" > /tmp/codex-backup-home/.codex/config.toml
         expect_pass \
           "install backs up existing Codex config under dotfiles backups" \
-          env HOME=/tmp/codex-backup-home ./default/apply
+          env HOME=/tmp/codex-backup-home ./features/default/apply
         assert_glob_exists "/tmp/codex-backup-home/.dotfiles/backups/.codex/config.toml.backup.*"
 
-        mkdir -p /tmp/dotfiles-without-home/default
-        cp ./default/apply /tmp/dotfiles-without-home/default/apply
+        mkdir -p /tmp/dotfiles-without-home/features/default
+        cp ./features/default/apply /tmp/dotfiles-without-home/features/default/apply
         cp ./verify.sh ./uninstall.sh /tmp/dotfiles-without-home/
         expect_fail "apply with missing home package" \
-          env HOME=/tmp/test-home bash /tmp/dotfiles-without-home/default/apply
+          env HOME=/tmp/test-home bash /tmp/dotfiles-without-home/features/default/apply
         expect_fail "verify with missing home package" env HOME=/tmp/test-home bash /tmp/dotfiles-without-home/verify.sh
         expect_fail "uninstall with missing home package" env HOME=/tmp/test-home bash /tmp/dotfiles-without-home/uninstall.sh
 
@@ -262,17 +262,17 @@ run_case() {
           chmod 0555 /tmp/readonly-home
           expect_fail \
             "install with read-only HOME" \
-            su -s /bin/bash nobody -c "HOME=/tmp/readonly-home /workspace/dotfiles/default/apply"
+            su -s /bin/bash nobody -c "HOME=/tmp/readonly-home /workspace/dotfiles/features/default/apply"
           chmod 0755 /tmp/readonly-home
         else
           echo "[container] skipping read-only HOME check because su is unavailable"
         fi
 
         expect_fail "verify before install" ./verify.sh
-        expect_pass "install" ./default/apply
+        expect_pass "install" ./features/default/apply
         assert_installed_ownership
         expect_pass "verify after install" ./verify.sh
-        expect_pass "second install backs up copied initial files" ./default/apply
+        expect_pass "second install backs up copied initial files" ./features/default/apply
         assert_glob_exists "${HOME}/.dotfiles/backups/.gitconfig.backup.*"
         assert_glob_exists "${HOME}/.dotfiles/backups/.ssh/config.backup.*"
         assert_installed_ownership
@@ -283,13 +283,13 @@ run_case() {
 
       run_no_package_manager_case() {
         expect_pass "syntax: install.sh" bash -n ./install.sh
-        expect_pass "syntax: default/apply" bash -n ./default/apply
+        expect_pass "syntax: features/default/apply" bash -n ./features/default/apply
         expect_pass "syntax: uninstall.sh" bash -n ./uninstall.sh
         expect_pass "syntax: verify.sh" bash -n ./verify.sh
         run_dotfile_tests
 
         expect_fail "verify before install" ./verify.sh
-        expect_fail "install without stow or package manager" ./default/apply
+        expect_fail "install without stow or package manager" ./features/default/apply
         expect_fail "verify after failed install" ./verify.sh
         expect_fail "uninstall without stow" ./uninstall.sh
       }

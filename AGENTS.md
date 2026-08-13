@@ -5,10 +5,11 @@ Guidance for agents working in this dotfiles repo.
 ## Architecture
 
 Dof owns bootstrap, workspace selection, and feature execution. The only
-intentional dof declaration is the executable `default/apply` hook.
+intentional dof declaration is the executable `features/default/apply` hook.
 
-This is a transitional architecture: `default/apply` installs GNU Stow when
-needed, copies `initial-files/`, and Stows `home/` into the target `$HOME`.
+This is a transitional architecture: `features/default/apply` installs GNU
+Stow when needed, copies `initial-files/`, and Stows `home/` into the
+target `$HOME`.
 Do not convert payload files to native dof ownership unless explicitly asked.
 
 The canonical checkout is `$HOME/.dof/workspace`. Files under `home/` map to
@@ -19,7 +20,8 @@ copied as regular files.
 
 - `./install.sh` bootstraps `$HOME/.dof/bin/dof`, clones this repository, and
   runs `dof apply`.
-- `default/apply` is the idempotent feature hook and underlying installer.
+- `features/default/apply` is the idempotent feature hook and underlying
+  installer.
 - `verify.sh` simulates Stow and checks the special Codex config link.
 - `uninstall.sh` removes Stow-owned links and the exact managed Codex link.
 
@@ -49,9 +51,9 @@ use `stow --adopt`, delete unmanaged files, or use `dof clone --force`.
 
 ## Workspace Rules
 
-Dof treats real top-level directories as features. For this migration, only
-`default/` may contain dof declarations (`home/`, `snippets.yaml`, or an
-`apply` hook). Existing infrastructure directories are intentionally inert.
+Dof only discovers features beneath `features/`. For this migration, only
+`features/default/` may contain dof declarations (`home/`, `snippets.yaml`, or
+an `apply` hook). Repository-level infrastructure directories are inert.
 
 Do not add secrets, tokens, or machine-local credentials to managed payloads.
 
@@ -60,7 +62,7 @@ Do not add secrets, tokens, or machine-local credentials to managed payloads.
 Run:
 
 ```sh
-bash -n install.sh default/apply uninstall.sh verify.sh tests/run.sh
+bash -n install.sh features/default/apply uninstall.sh verify.sh tests/run.sh
 dof lint .
 tests/run.sh --all
 ```
