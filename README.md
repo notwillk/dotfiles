@@ -11,9 +11,11 @@ enabled by the bootstrap.
 Install the default feature set with:
 
 ```sh
-curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
-  https://raw.githubusercontent.com/notwillk/dotfiles/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/notwillk/dotfiles/main/install.sh | bash
 ```
+
+This fails on HTTP errors, follows redirects, hides the progress meter, and
+still prints useful error messages.
 
 To opt into the transitional Stow-managed home links:
 
