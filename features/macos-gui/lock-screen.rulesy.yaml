@@ -1,0 +1,32 @@
+rules:
+  - name: Display turns off after 10 minutes on battery
+    skip-if: |
+      [[ "$(uname -s)" != "Darwin" ]] && exit 0
+      ! pmset -g custom 2>/dev/null | grep -q '^[[:space:]]*Battery Power:'
+    check: |
+      set -e
+      timeout="$(
+        pmset -g custom 2>/dev/null |
+          awk '
+            /^[[:space:]]*Battery Power:/ { active = 1; next }
+            /^[[:space:]]*(AC|UPS) Power:/ { active = 0 }
+            active && $1 == "displaysleep" { print $2; exit }
+          '
+      )"
+      test "${timeout}" = 10
+    fix: sudo pmset -b displaysleep 10
+
+  - name: Display turns off after 60 minutes on power adapter
+    skip-if: '[[ "$(uname -s)" != "Darwin" ]]'
+    check: |
+      set -e
+      timeout="$(
+        pmset -g custom 2>/dev/null |
+          awk '
+            /^[[:space:]]*AC Power:/ { active = 1; next }
+            /^[[:space:]]*(Battery|UPS) Power:/ { active = 0 }
+            active && $1 == "displaysleep" { print $2; exit }
+          '
+      )"
+      test "${timeout}" = 60
+    fix: sudo pmset -c displaysleep 60

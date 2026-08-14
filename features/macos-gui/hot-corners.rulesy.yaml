@@ -1,0 +1,29 @@
+rules:
+  # macOS 10.14 (Mojave) supports the current Hot Corners workflow.
+  - name: Hot corners have the intended actions
+    skip-if: |
+      [[ "$(uname -s)" != "Darwin" ]] && exit 0
+      version="$(sw_vers -productVersion 2>/dev/null)" || exit 0
+      IFS=. read -r major minor _ <<<"${version}"
+      [[ "${major:-}" =~ ^[0-9]+$ && "${minor:-}" =~ ^[0-9]+$ ]] || exit 0
+      (( major < 10 || (major == 10 && minor < 14) ))
+    check: |
+      set -e
+      test "$(defaults read com.apple.dock wvous-tl-corner 2>/dev/null)" = 6
+      test "$(defaults read com.apple.dock wvous-tl-modifier 2>/dev/null)" = 0
+      test "$(defaults read com.apple.dock wvous-tr-corner 2>/dev/null)" = 6
+      test "$(defaults read com.apple.dock wvous-tr-modifier 2>/dev/null)" = 0
+      test "$(defaults read com.apple.dock wvous-bl-corner 2>/dev/null)" = 13
+      test "$(defaults read com.apple.dock wvous-bl-modifier 2>/dev/null)" = 1048576
+      test "$(defaults read com.apple.dock wvous-br-corner 2>/dev/null)" = 13
+      test "$(defaults read com.apple.dock wvous-br-modifier 2>/dev/null)" = 1048576
+    fix: |
+      defaults write com.apple.dock wvous-tl-corner -int 6
+      defaults write com.apple.dock wvous-tl-modifier -int 0
+      defaults write com.apple.dock wvous-tr-corner -int 6
+      defaults write com.apple.dock wvous-tr-modifier -int 0
+      defaults write com.apple.dock wvous-bl-corner -int 13
+      defaults write com.apple.dock wvous-bl-modifier -int 1048576
+      defaults write com.apple.dock wvous-br-corner -int 13
+      defaults write com.apple.dock wvous-br-modifier -int 1048576
+      killall Dock >/dev/null 2>&1 || true

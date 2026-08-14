@@ -40,6 +40,24 @@ assert_link_contains() {
     fail "expected ${path} to point into ${expected}"
 }
 
+seed_rulesy() {
+  local home="$1"
+
+  mkdir -p "${home}/bin"
+  cat >"${home}/bin/rulesy" <<'RULESY'
+#!/bin/sh
+printf '%s\n' "$*" >>"${HOME}/rulesy-calls"
+RULESY
+  chmod 0755 "${home}/bin/rulesy"
+}
+
+seed_dof() {
+  local home="$1"
+
+  mkdir -p "${home}/.dof/bin"
+  cp "${DOF_BIN}" "${home}/.dof/bin/dof"
+}
+
 run_bootstrap_test() {
   local home="${TEST_ROOT}/bootstrap-home"
   local fake_bin="${TEST_ROOT}/fake-bin"
@@ -102,15 +120,154 @@ DOF
   fi
 }
 
+run_rulesy_install_test() {
+  local home="${TEST_ROOT}/rulesy-home"
+  local fake_bin="${TEST_ROOT}/rulesy-fake-bin"
+
+  mkdir -p "${home}" "${fake_bin}"
+  cat >"${fake_bin}/curl" <<'CURL'
+#!/bin/sh
+case "$*" in
+  "-fsSL https://raw.githubusercontent.com/notwillk/rulesy/main/scripts/install.sh") ;;
+  *) printf 'unexpected curl arguments: %s\n' "$*" >&2; exit 1 ;;
+esac
+cat <<'INSTALLER'
+#!/usr/bin/env bash
+set -euo pipefail
+[[ "${DEST:-}" == "${HOME}/bin" ]]
+mkdir -p "${DEST}"
+cat >"${DEST}/rulesy" <<'RULESY'
+#!/bin/sh
+exit 0
+RULESY
+chmod 0755 "${DEST}/rulesy"
+printf 'installed\n' >>"${HOME}/rulesy-installs"
+INSTALLER
+CURL
+  chmod 0755 "${fake_bin}/curl"
+
+  HOME="${home}" PATH="${fake_bin}:${PATH}" "${SNAPSHOT}/features/default/apply"
+  [[ -x "${home}/bin/rulesy" ]] || fail "apply did not install Rulesy to HOME/bin"
+  [[ "$(wc -l <"${home}/rulesy-installs")" -eq 1 ]] ||
+    fail "apply did not run the Rulesy installer exactly once"
+  [[ -f "${home}/.dof/bin/rulesy" && ! -L "${home}/.dof/bin/rulesy" &&
+    -x "${home}/.dof/bin/rulesy" ]] ||
+    fail "apply did not install a regular Rulesy dof entrypoint"
+
+  cat >"${fake_bin}/curl" <<'CURL'
+#!/bin/sh
+printf 'curl must not run when Rulesy is already executable\n' >&2
+exit 99
+CURL
+  HOME="${home}" PATH="${fake_bin}:${PATH}" "${SNAPSHOT}/features/default/apply"
+  [[ "$(wc -l <"${home}/rulesy-installs")" -eq 1 ]] ||
+    fail "reapply unexpectedly reinstalled Rulesy"
+
+  local failure_home="${TEST_ROOT}/rulesy-failure-home"
+  local failure_bin="${TEST_ROOT}/rulesy-failure-bin"
+  mkdir -p "${failure_home}" "${failure_bin}"
+  cat >"${failure_bin}/curl" <<'CURL'
+#!/bin/sh
+exit 19
+CURL
+  chmod 0755 "${failure_bin}/curl"
+
+  if HOME="${failure_home}" PATH="${failure_bin}:${PATH}" \
+    "${SNAPSHOT}/features/default/apply"; then
+    fail "apply ignored a Rulesy installer failure"
+  fi
+  [[ ! -e "${failure_home}/bin/rulesy" && ! -e "${failure_home}/.bashrc" ]] ||
+    fail "failed Rulesy installation continued into dotfile changes"
+}
+
+run_hostname_derivation_test() {
+  local fake_bin="${TEST_ROOT}/hostname-fake-bin"
+  mkdir -p "${fake_bin}"
+
+  cat >"${fake_bin}/uname" <<'UNAME'
+#!/bin/sh
+printf '%s\n' "${FAKE_OS:-Darwin}"
+UNAME
+  cat >"${fake_bin}/ioreg" <<'IOREG'
+#!/bin/sh
+printf '    "product-name" = <"%s">\n' "${FAKE_MARKETING_NAME}"
+IOREG
+  cat >"${fake_bin}/system_profiler" <<'SYSTEM_PROFILER'
+#!/bin/sh
+printf '      Chip: %s\n' "${FAKE_CHIP_NAME}"
+SYSTEM_PROFILER
+  chmod 0755 "${fake_bin}/uname" "${fake_bin}/ioreg" "${fake_bin}/system_profiler"
+
+  local actual
+  actual="$(
+    FAKE_MARKETING_NAME='MacBook Pro (14-inch, Nov 2024)' \
+      FAKE_CHIP_NAME='Apple M4 Pro' \
+      PATH="${fake_bin}:${PATH}" \
+      "${SNAPSHOT}/features/hostname/desired-hostname"
+  )"
+  [[ "${actual}" == "mbp-m4p-2024" ]] ||
+    fail "hostname derivation returned ${actual}, expected mbp-m4p-2024"
+
+  actual="$(
+    FAKE_MARKETING_NAME='Mac Studio (2023)' \
+      FAKE_CHIP_NAME='Apple M2 Ultra' \
+      PATH="${fake_bin}:${PATH}" \
+      "${SNAPSHOT}/features/hostname/desired-hostname"
+  )"
+  [[ "${actual}" == "ms-m2u-2023" ]] ||
+    fail "hostname derivation returned ${actual}, expected ms-m2u-2023"
+
+  if FAKE_OS=Linux \
+    FAKE_MARKETING_NAME='MacBook Pro (14-inch, Nov 2024)' \
+    FAKE_CHIP_NAME='Apple M4 Pro' \
+    PATH="${fake_bin}:${PATH}" \
+    "${SNAPSHOT}/features/hostname/desired-hostname"; then
+    fail "hostname derivation accepted a non-macOS host"
+  fi
+}
+
+run_rulesy_shell_safety_test() {
+  local file
+  local expected
+  local actual
+
+  while read -r file expected; do
+    actual="$(grep -c '^      set -e$' "${SNAPSHOT}/${file}" || true)"
+    [[ "${actual}" -eq "${expected}" ]] ||
+      fail "${file} has ${actual} strict shell blocks; expected ${expected}"
+  done <<'STRICT_BLOCKS'
+features/macos-gui/accessibility.rulesy.yaml 1
+features/macos-gui/appearance.rulesy.yaml 1
+features/macos-gui/screenshots.rulesy.yaml 1
+features/macos-gui/hot-corners.rulesy.yaml 1
+features/hostname/rulesy.yaml 2
+STRICT_BLOCKS
+
+  grep -Fqx '      killall Dock >/dev/null 2>&1 || true' \
+    "${SNAPSHOT}/features/macos-gui/hot-corners.rulesy.yaml" ||
+    fail "Hot Corners does not tolerate Dock already being stopped"
+}
+
 run_normal_home_test() {
   local home="${TEST_ROOT}/normal-home"
+  seed_rulesy "${home}"
+  seed_dof "${home}"
   mkdir -p "${home}/keep"
   printf 'unmanaged\n' >"${home}/keep/file"
 
   HOME="${home}" "${DOF_BIN}" clone "${SNAPSHOT_URL}"
-  [[ "$(HOME="${home}" "${DOF_BIN}" features --json)" == '["default"]' ]] ||
-    fail "dof did not discover exactly the default feature"
+  [[ "$(HOME="${home}" "${DOF_BIN}" features --json)" == '["default","hostname","macos-gui"]' ]] ||
+    fail "dof did not discover exactly the intended features"
   HOME="${home}" "${DOF_BIN}" apply
+  [[ -f "${home}/.dof/bin/rulesy" && ! -L "${home}/.dof/bin/rulesy" &&
+    -x "${home}/.dof/bin/rulesy" ]] ||
+    fail "default did not install a regular Rulesy dof entrypoint"
+  [[ "$(sed -n '1p' "${home}/rulesy-calls")" == \
+    "--config=${home}/.dof/workspace/features/hostname/rulesy.yaml check --fix" ]] ||
+    fail "hostname did not invoke Rulesy through dof with the expected arguments"
+  [[ "$(sed -n '2p' "${home}/rulesy-calls")" == \
+    "--config=${home}/.dof/workspace/features/macos-gui/rulesy.yaml check --fix --non-interactive" ]] ||
+    fail "macos-gui did not invoke Rulesy through dof with the expected arguments"
 
   [[ -f "${home}/.bashrc" && ! -L "${home}/.bashrc" ]] ||
     fail "initial .bashrc is not a regular file"
@@ -124,20 +281,21 @@ run_normal_home_test() {
     fail "reapply did not back up the copied initial file"
 
   HOME="${home}" "${home}/.dof/workspace/verify.sh"
-  mkdir -p "${home}/.dof/bin"
-  cp "${DOF_BIN}" "${home}/.dof/bin/dof"
   HOME="${home}" bash --noprofile --rcfile "${home}/.bashrc" -i -c '[[ "$(command -v dof)" == "$HOME/.dof/bin/dof" ]]'
 
   HOME="${home}" "${home}/.dof/workspace/uninstall.sh"
   [[ ! -e "${home}/managed_by_dofiles.md" && ! -L "${home}/managed_by_dofiles.md" ]] ||
     fail "uninstall left the managed marker link"
-  [[ -f "${home}/.bashrc" && -x "${home}/.dof/bin/dof" ]] ||
-    fail "uninstall removed copied files or dof"
+  [[ -f "${home}/.bashrc" && -x "${home}/.dof/bin/dof" &&
+    -x "${home}/.dof/bin/rulesy" && -x "${home}/bin/rulesy" ]] ||
+    fail "uninstall removed copied files, dof, or Rulesy"
 }
 
 run_symlinked_codex_test() {
   local home="${TEST_ROOT}/codex-home"
   local external="${TEST_ROOT}/codex-external"
+  seed_rulesy "${home}"
+  seed_dof "${home}"
   mkdir -p "${home}" "${external}"
   ln -s "${external}" "${home}/.codex"
 
@@ -148,6 +306,8 @@ run_symlinked_codex_test() {
 
 run_legacy_handoff_test() {
   local home="${TEST_ROOT}/legacy-home"
+  seed_rulesy "${home}"
+  seed_dof "${home}"
   mkdir -p "${home}"
 
   HOME="${home}" "${SNAPSHOT}/features/default/apply"
@@ -162,6 +322,8 @@ run_legacy_handoff_test() {
 run_ambiguous_legacy_test() {
   local home="${TEST_ROOT}/ambiguous-home"
   local unrelated="${TEST_ROOT}/unrelated-marker"
+  seed_rulesy "${home}"
+  seed_dof "${home}"
   mkdir -p "${home}"
   printf 'unrelated\n' >"${unrelated}"
   ln -s "${unrelated}" "${home}/managed_by_dofiles.md"
@@ -175,6 +337,9 @@ run_ambiguous_legacy_test() {
 }
 
 run_bootstrap_test
+run_rulesy_install_test
+run_hostname_derivation_test
+run_rulesy_shell_safety_test
 run_normal_home_test
 run_symlinked_codex_test
 run_legacy_handoff_test

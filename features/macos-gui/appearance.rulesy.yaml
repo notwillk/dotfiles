@@ -1,0 +1,27 @@
+rules:
+  # macOS 10.14 (Mojave) introduced system-wide Dark appearance.
+  - name: System appearance is always Dark
+    skip-if: |
+      [[ "$(uname -s)" != "Darwin" ]] && exit 0
+      version="$(sw_vers -productVersion 2>/dev/null)" || exit 0
+      IFS=. read -r major minor _ <<<"${version}"
+      [[ "${major:-}" =~ ^[0-9]+$ && "${minor:-}" =~ ^[0-9]+$ ]] || exit 0
+      (( major < 10 || (major == 10 && minor < 14) ))
+    check: |
+      set -e
+      test "$(defaults read NSGlobalDomain AppleInterfaceStyle 2>/dev/null)" = Dark
+      test "$(defaults read NSGlobalDomain AppleInterfaceStyleSwitchesAutomatically 2>/dev/null || true)" != 1
+    fix: |
+      defaults delete NSGlobalDomain AppleInterfaceStyleSwitchesAutomatically >/dev/null 2>&1 || true
+      defaults write NSGlobalDomain AppleInterfaceStyle -string Dark
+
+  # macOS 26 (Tahoe) introduced the Clear icon and widget style.
+  - name: Icon and widget style is Clear
+    skip-if: |
+      [[ "$(uname -s)" != "Darwin" ]] && exit 0
+      version="$(sw_vers -productVersion 2>/dev/null)" || exit 0
+      IFS=. read -r major _ <<<"${version}"
+      [[ "${major:-}" =~ ^[0-9]+$ ]] || exit 0
+      (( major < 26 ))
+    check: test "$(defaults read NSGlobalDomain AppleIconAppearanceTheme 2>/dev/null)" = ClearAutomatic
+    fix: defaults write NSGlobalDomain AppleIconAppearanceTheme -string ClearAutomatic

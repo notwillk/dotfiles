@@ -1,0 +1,9 @@
+rules:
+  - remote: accessibility.rulesy.yaml
+  - remote: appearance.rulesy.yaml
+  - remote: apps.rulesy.yaml
+  - remote: hot-corners.rulesy.yaml
+  - remote: lock-screen.rulesy.yaml
+  - remote: menu-bar.rulesy.yaml
+  - remote: screenshots.rulesy.yaml
+  - remote: trackpad.rulesy.yaml

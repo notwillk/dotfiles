@@ -1,0 +1,152 @@
+rules:
+  # ShowDate uses 0=when space allows, 1=always, and 2=never on macOS 12.4+.
+  - name: Menu bar clock has the intended presentation
+    skip-if: |
+      [[ "$(uname -s)" != "Darwin" ]] && exit 0
+      version="$(sw_vers -productVersion 2>/dev/null)" || exit 0
+      IFS=. read -r major minor _ <<<"${version}"
+      [[ "${major:-}" =~ ^[0-9]+$ && "${minor:-}" =~ ^[0-9]+$ ]] || exit 0
+      (( major < 12 || (major == 12 && minor < 4) ))
+    check: |
+      set -e
+      test "$(defaults read com.apple.menuextra.clock ShowDayOfWeek 2>/dev/null)" = 0
+      test "$(defaults read com.apple.menuextra.clock ShowDate 2>/dev/null)" = 1
+      test "$(defaults read com.apple.menuextra.clock IsAnalog 2>/dev/null)" = 0
+      test "$(defaults read com.apple.menuextra.clock ShowAMPM 2>/dev/null)" = 0
+      test "$(defaults read com.apple.menuextra.clock FlashDateSeparators 2>/dev/null)" = 0
+      test "$(defaults read com.apple.menuextra.clock ShowSeconds 2>/dev/null)" = 0
+
+      menu_announcement="$(defaults read com.apple.menuextra.clock TimeAnnouncementsEnabled 2>/dev/null || true)"
+      test -z "${menu_announcement}" || test "${menu_announcement}" = 0
+
+      speech_announcement="$(
+        defaults read com.apple.speech.synthesis.general.prefs TimeAnnouncementPrefs 2>/dev/null |
+          awk -F '= ' '/TimeAnnouncementsEnabled/ { gsub(/;/, "", $2); print $2; exit }'
+      )"
+      test -z "${speech_announcement}" || test "${speech_announcement}" = 0
+    fix: |
+      set -e
+      defaults write com.apple.menuextra.clock ShowDayOfWeek -bool false
+      defaults write com.apple.menuextra.clock ShowDate -int 1
+      defaults write com.apple.menuextra.clock IsAnalog -bool false
+      defaults write com.apple.menuextra.clock ShowAMPM -bool false
+      defaults write com.apple.menuextra.clock FlashDateSeparators -bool false
+      defaults write com.apple.menuextra.clock ShowSeconds -bool false
+      defaults write com.apple.menuextra.clock TimeAnnouncementsEnabled -bool false
+      defaults write com.apple.speech.synthesis.general.prefs \
+        TimeAnnouncementPrefs -dict-add TimeAnnouncementsEnabled -bool false
+      killall SpeechSynthesisServer >/dev/null 2>&1 || true
+      killall ControlCenter >/dev/null 2>&1 || true
+
+  # macOS 26 (Tahoe) exposes this complete set in Menu Bar settings.
+  - name: Menu bar controls have the intended visibility
+    skip-if: |
+      [[ "$(uname -s)" != "Darwin" ]] && exit 0
+      version="$(sw_vers -productVersion 2>/dev/null)" || exit 0
+      IFS=. read -r major _ <<<"${version}"
+      [[ "${major:-}" =~ ^[0-9]+$ ]] || exit 0
+      (( major < 26 ))
+    check: |
+      set -e
+
+      is_false_or_unset() {
+        local value
+        value="$(defaults read "$1" "$2" 2>/dev/null || true)"
+        test -z "${value}" || test "${value}" = 0
+      }
+
+      is_hidden_module() {
+        local module="$1"
+        shift
+        local value
+        value="$(defaults -currentHost read com.apple.controlcenter "${module}" 2>/dev/null)"
+        [[ " $* " == *" ${value} "* ]]
+        is_false_or_unset com.apple.controlcenter "NSStatusItem Visible ${module}"
+      }
+
+      test "$(defaults -currentHost read com.apple.controlcenter WiFi 2>/dev/null)" = 2
+      test "$(defaults read com.apple.controlcenter 'NSStatusItem Visible WiFi' 2>/dev/null)" = 1
+      test "$(defaults read com.apple.controlcenter 'NSStatusItem Visible Battery' 2>/dev/null)" = 1
+      test "$(defaults -currentHost read com.apple.controlcenter Weather 2>/dev/null)" = 2
+      test "$(defaults read com.apple.controlcenter 'NSStatusItem Visible Weather' 2>/dev/null)" = 1
+
+      test "$(defaults -currentHost read com.apple.controlcenter FocusModes 2>/dev/null)" = 2
+      test "$(defaults -currentHost read com.apple.controlcenter ScreenMirroring 2>/dev/null)" = 2
+      test "$(defaults -currentHost read com.apple.controlcenter Display 2>/dev/null)" = 2
+      test "$(defaults -currentHost read com.apple.controlcenter Sound 2>/dev/null)" = 2
+      test "$(defaults -currentHost read com.apple.controlcenter Timer 2>/dev/null)" = 2
+
+      test "$(defaults -currentHost read com.apple.Spotlight MenuItemHidden 2>/dev/null)" = 1
+      is_false_or_unset com.apple.Spotlight 'NSStatusItem Visible Item-0'
+      is_hidden_module Bluetooth 24
+      is_hidden_module AirDrop 8
+      is_hidden_module UserSwitcher 8 9 12
+      is_hidden_module TextInput 8
+      is_hidden_module TimeMachine 8
+      is_hidden_module KeyboardBrightness 8 9 12
+      is_hidden_module VPN 8
+      is_false_or_unset com.apple.TextInputMenu visible
+      is_false_or_unset com.apple.systemuiserver \
+        'NSStatusItem Visible com.apple.menuextra.TimeMachine'
+      is_false_or_unset com.apple.systemuiserver \
+        'NSStatusItem Visible com.apple.menuextra.vpn'
+    fix: |
+      set -e
+
+      show_module() {
+        defaults -currentHost write com.apple.controlcenter "$1" -int 2
+        defaults write com.apple.controlcenter "NSStatusItem Visible $1" -bool true
+      }
+
+      hide_module() {
+        defaults -currentHost write com.apple.controlcenter "$1" -int "$2"
+        defaults write com.apple.controlcenter "NSStatusItem Visible $1" -bool false
+      }
+
+      hide_combined_module() {
+        local module="$1"
+        local current desired
+        current="$(defaults -currentHost read com.apple.controlcenter "${module}" 2>/dev/null || true)"
+        case "${current}" in
+          3|9) desired=9 ;;
+          6|12) desired=12 ;;
+          *) desired=8 ;;
+        esac
+        hide_module "${module}" "${desired}"
+      }
+
+      show_module WiFi
+
+      battery="$(defaults -currentHost read com.apple.controlcenter Battery 2>/dev/null || true)"
+      case "${battery}" in
+        3|9) battery=3 ;;
+        6|12) battery=6 ;;
+        *) battery=2 ;;
+      esac
+      defaults -currentHost write com.apple.controlcenter Battery -int "${battery}"
+      defaults write com.apple.controlcenter 'NSStatusItem Visible Battery' -bool true
+
+      show_module Weather
+      defaults -currentHost write com.apple.controlcenter FocusModes -int 2
+      defaults -currentHost write com.apple.controlcenter ScreenMirroring -int 2
+      defaults -currentHost write com.apple.controlcenter Display -int 2
+      defaults -currentHost write com.apple.controlcenter Sound -int 2
+      defaults -currentHost write com.apple.controlcenter Timer -int 2
+
+      defaults -currentHost write com.apple.Spotlight MenuItemHidden -bool true
+      defaults write com.apple.Spotlight 'NSStatusItem Visible Item-0' -bool false
+      hide_module Bluetooth 24
+      hide_module AirDrop 8
+      hide_combined_module UserSwitcher
+      hide_module TextInput 8
+      hide_module TimeMachine 8
+      hide_combined_module KeyboardBrightness
+      hide_module VPN 8
+      defaults write com.apple.TextInputMenu visible -bool false
+      defaults write com.apple.systemuiserver \
+        'NSStatusItem Visible com.apple.menuextra.TimeMachine' -bool false
+      defaults write com.apple.systemuiserver \
+        'NSStatusItem Visible com.apple.menuextra.vpn' -bool false
+
+      killall ControlCenter >/dev/null 2>&1 || true
+      killall SystemUIServer >/dev/null 2>&1 || true
