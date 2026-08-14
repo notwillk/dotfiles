@@ -66,6 +66,7 @@ if [[ -n "${ACCOUNT_HOME}" && "${HOME}" != "${ACCOUNT_HOME}" ]]; then
 fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+FEATURE_ROOT="${REPO_ROOT}/features/default"
 DOTFILES_SOURCE_PATH="${REPO_ROOT}/home"
 INITIAL_FILES_SOURCE_PATH="${REPO_ROOT}/initial-files"
 DOTFILES_STATE_PATH="${HOME}/.dotfiles"
@@ -308,6 +309,11 @@ fi
 
 install_rulesy
 install_rulesy_for_dof
+
+"${HOME}/.dof/bin/dof" run rulesy \
+  "--config=${FEATURE_ROOT}/rulesy.yaml" \
+  check \
+  --fix
 
 resolve_link_target() {
   local link_path="$1"

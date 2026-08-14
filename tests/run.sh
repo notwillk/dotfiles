@@ -147,9 +147,11 @@ run_case() {
       seed_rulesy() {
         local home="$1"
 
-        mkdir -p "${home}/bin"
+        mkdir -p "${home}/bin" "${home}/.dof/bin"
         : >"${home}/bin/rulesy"
         chmod 0755 "${home}/bin/rulesy"
+        cp ./tests/support/fake-dof.sh "${home}/.dof/bin/dof"
+        chmod 0755 "${home}/.dof/bin/dof"
       }
 
       assert_installed_ownership() {
@@ -234,6 +236,7 @@ run_case() {
         expect_pass "syntax: features/hostname/desired-hostname" \
           bash -n ./features/hostname/desired-hostname
         expect_pass "syntax: features/macos-gui/apply" bash -n ./features/macos-gui/apply
+        expect_pass "syntax: tests/support/fake-dof.sh" bash -n ./tests/support/fake-dof.sh
         expect_pass "syntax: uninstall.sh" bash -n ./uninstall.sh
         expect_pass "syntax: verify.sh" bash -n ./verify.sh
         run_dotfile_tests
@@ -306,6 +309,7 @@ run_case() {
         expect_pass "syntax: features/hostname/desired-hostname" \
           bash -n ./features/hostname/desired-hostname
         expect_pass "syntax: features/macos-gui/apply" bash -n ./features/macos-gui/apply
+        expect_pass "syntax: tests/support/fake-dof.sh" bash -n ./tests/support/fake-dof.sh
         expect_pass "syntax: uninstall.sh" bash -n ./uninstall.sh
         expect_pass "syntax: verify.sh" bash -n ./verify.sh
         run_dotfile_tests
