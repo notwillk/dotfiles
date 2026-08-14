@@ -13,6 +13,13 @@ machine, with Homebrew preferred before the supported system managers. A
 missing prerequisite fails before home links, copied initial files, or the
 Codex link are changed. This remains post-bootstrap maintenance: dof's own
 installer must still be able to complete before the default feature can run.
+Fresh installs leave `macos-gui` disabled so bootstrap does not install apps or
+change GUI preferences implicitly. Enable it explicitly, then apply:
+
+```sh
+"$HOME/.dof/bin/dof" feature enable macos-gui
+"$HOME/.dof/bin/dof" apply
+```
 
 The `macos-gui` feature uses Rulesy to install Homebrew, append its desired
 formula, casks, and App Store entries to `$HOME/.Brewfile`, and reconcile them

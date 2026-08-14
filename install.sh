@@ -18,6 +18,14 @@ if [[ ! -d "${HOME}" ]]; then
 fi
 
 DOF_BIN="${HOME}/.dof/bin/dof"
+DOF_CONFIG_PATH="${HOME}/.dof/config.yaml"
+DOF_WORKSPACE_PATH="${HOME}/.dof/workspace"
+FRESH_DOF_STATE=0
+
+if [[ ! -e "${DOF_CONFIG_PATH}" && ! -L "${DOF_CONFIG_PATH}" &&
+  ! -e "${DOF_WORKSPACE_PATH}" && ! -L "${DOF_WORKSPACE_PATH}" ]]; then
+  FRESH_DOF_STATE=1
+fi
 
 if [[ ! -x "${DOF_BIN}" ]]; then
   printf '[install.sh] Installing dof into %s...\n' "${HOME}/.dof/bin"
@@ -32,7 +40,12 @@ fi
 printf '[install.sh] Installing dotfiles workspace from %s...\n' "${DOTFILES_REPOSITORY}"
 "${DOF_BIN}" clone "${DOTFILES_REPOSITORY}"
 
-printf '[install.sh] Applying the default dotfiles feature...\n'
+if [[ "${FRESH_DOF_STATE}" -eq 1 ]]; then
+  printf '[install.sh] Leaving the macos-gui feature disabled until explicitly enabled...\n'
+  "${DOF_BIN}" feature disable macos-gui
+fi
+
+printf '[install.sh] Applying enabled dotfiles features...\n'
 "${DOF_BIN}" apply
 
 printf '[install.sh] Dotfiles installation completed successfully.\n'
