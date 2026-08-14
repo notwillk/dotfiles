@@ -1,0 +1,65 @@
+rules:
+  - name: Homebrew is installed
+    skip-if: '[[ "$(uname -s)" != "Darwin" ]]'
+    check: command -v brew >/dev/null 2>&1 || test -x /opt/homebrew/bin/brew || test -x /usr/local/bin/brew
+    fix: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+  - name: Global Brewfile contains the mas formula
+    skip-if: '[[ "$(uname -s)" != "Darwin" ]]'
+    check: grep -Fxq 'brew "mas"' "${HOME}/.Brewfile" 2>/dev/null
+    fix: printf '%s\n' 'brew "mas"' >>"${HOME}/.Brewfile"
+
+  - name: Global Brewfile contains the 1Password cask
+    skip-if: '[[ "$(uname -s)" != "Darwin" ]]'
+    check: grep -Fxq 'cask "1password"' "${HOME}/.Brewfile" 2>/dev/null
+    fix: printf '%s\n' 'cask "1password"' >>"${HOME}/.Brewfile"
+
+  - name: Global Brewfile contains the ChatGPT cask
+    skip-if: '[[ "$(uname -s)" != "Darwin" ]]'
+    check: grep -Fxq 'cask "chatgpt"' "${HOME}/.Brewfile" 2>/dev/null
+    fix: printf '%s\n' 'cask "chatgpt"' >>"${HOME}/.Brewfile"
+
+  - name: Global Brewfile contains the Brave Browser cask
+    skip-if: '[[ "$(uname -s)" != "Darwin" ]]'
+    check: grep -Fxq 'cask "brave-browser"' "${HOME}/.Brewfile" 2>/dev/null
+    fix: printf '%s\n' 'cask "brave-browser"' >>"${HOME}/.Brewfile"
+
+  - name: Global Brewfile contains the Lungo App Store app
+    skip-if: '[[ "$(uname -s)" != "Darwin" ]]'
+    check: |
+      grep -Fxq 'mas "Lungo", id: 1263070803' "${HOME}/.Brewfile" 2>/dev/null
+    fix: |
+      printf '%s\n' 'mas "Lungo", id: 1263070803' >>"${HOME}/.Brewfile"
+
+  - name: Global Brewfile contains the PIA VPN App Store app
+    skip-if: '[[ "$(uname -s)" != "Darwin" ]]'
+    check: |
+      grep -Fxq 'mas "PIA VPN", id: 955626407' "${HOME}/.Brewfile" 2>/dev/null
+    fix: |
+      printf '%s\n' 'mas "PIA VPN", id: 955626407' >>"${HOME}/.Brewfile"
+
+  - name: Global Brewfile contains the Tailscale App Store app
+    skip-if: '[[ "$(uname -s)" != "Darwin" ]]'
+    check: |
+      grep -Fxq 'mas "Tailscale", id: 1475387142' "${HOME}/.Brewfile" 2>/dev/null
+    fix: |
+      printf '%s\n' 'mas "Tailscale", id: 1475387142' >>"${HOME}/.Brewfile"
+
+  - name: Brewfile applications are installed
+    skip-if: '[[ "$(uname -s)" != "Darwin" ]]'
+    check: |
+      brew_bin="$(command -v brew || true)"
+      if [[ -z "${brew_bin}" && -x /opt/homebrew/bin/brew ]]; then
+        brew_bin=/opt/homebrew/bin/brew
+      elif [[ -z "${brew_bin}" && -x /usr/local/bin/brew ]]; then
+        brew_bin=/usr/local/bin/brew
+      fi
+      [[ -n "${brew_bin}" ]] && "${brew_bin}" bundle check --global
+    fix: |
+      brew_bin="$(command -v brew || true)"
+      if [[ -z "${brew_bin}" && -x /opt/homebrew/bin/brew ]]; then
+        brew_bin=/opt/homebrew/bin/brew
+      elif [[ -z "${brew_bin}" && -x /usr/local/bin/brew ]]; then
+        brew_bin=/usr/local/bin/brew
+      fi
+      [[ -n "${brew_bin}" ]] && "${brew_bin}" bundle --global

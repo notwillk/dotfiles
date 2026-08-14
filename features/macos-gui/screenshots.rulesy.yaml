@@ -1,0 +1,15 @@
+rules:
+  # macOS 10.14 (Mojave) introduced Apple's supported save-location workflow.
+  - name: Screenshots save to ~/Screenshots
+    skip-if: |
+      [[ "$(uname -s)" != "Darwin" ]] && exit 0
+      version="$(sw_vers -productVersion 2>/dev/null)" || exit 0
+      IFS=. read -r major minor _ <<<"${version}"
+      [[ "${major:-}" =~ ^[0-9]+$ && "${minor:-}" =~ ^[0-9]+$ ]] || exit 0
+      (( major < 10 || (major == 10 && minor < 14) ))
+    check: |
+      test -d "$HOME/Screenshots"
+      test "$(defaults read com.apple.screencapture location 2>/dev/null)" = "$HOME/Screenshots"
+    fix: |
+      mkdir -p "$HOME/Screenshots"
+      defaults write com.apple.screencapture location -string "$HOME/Screenshots"

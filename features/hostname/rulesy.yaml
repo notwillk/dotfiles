@@ -1,0 +1,14 @@
+rules:
+  - name: macOS hostname follows the hardware naming convention
+    skip-if: '[[ "$(uname -s)" != "Darwin" ]]'
+    check: |
+      desired="$(./desired-hostname)"
+      test "$(scutil --get ComputerName 2>/dev/null)" = "${desired}"
+      test "$(scutil --get LocalHostName 2>/dev/null)" = "${desired}"
+      test "$(scutil --get HostName 2>/dev/null)" = "${desired}"
+    interactive-fix: |
+      desired="$(./desired-hostname)"
+      sudo -v
+      sudo scutil --set ComputerName "${desired}"
+      sudo scutil --set LocalHostName "${desired}"
+      sudo scutil --set HostName "${desired}"

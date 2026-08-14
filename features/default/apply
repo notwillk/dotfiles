@@ -72,11 +72,69 @@ DOTFILES_STATE_PATH="${HOME}/.dotfiles"
 BACKUP_PATH="${DOTFILES_STATE_PATH}/backups"
 CODEX_SOURCE_PATH="${DOTFILES_SOURCE_PATH}/.codex"
 CODEX_TARGET_PATH="${HOME}/.codex"
+RULESY_BIN="${HOME}/bin/rulesy"
+DOF_RULESY_BIN="${HOME}/.dof/bin/rulesy"
+RULESY_INSTALL_URL="https://raw.githubusercontent.com/notwillk/rulesy/main/scripts/install.sh"
 
 if [[ ! -d "${DOTFILES_SOURCE_PATH}" ]]; then
   log "Expected Stow package directory '${DOTFILES_SOURCE_PATH}' does not exist." >&2
   exit 1
 fi
+
+install_rulesy() {
+  if [[ -x "${RULESY_BIN}" ]]; then
+    log "Rulesy is installed: ${RULESY_BIN}"
+    return
+  fi
+
+  mkdir -p "${HOME}/bin"
+  log "Rulesy is not installed. Installing to ${RULESY_BIN}..."
+  curl -fsSL "${RULESY_INSTALL_URL}" | DEST="${HOME}/bin" bash
+
+  if [[ ! -x "${RULESY_BIN}" ]]; then
+    log "Rulesy installation completed without creating executable '${RULESY_BIN}'." >&2
+    exit 1
+  fi
+
+  log "Rulesy installed: ${RULESY_BIN}"
+}
+
+install_rulesy_for_dof() {
+  local wrapper_dir
+  local wrapper_tmp
+
+  wrapper_dir="$(dirname "${DOF_RULESY_BIN}")"
+  mkdir -p "${wrapper_dir}"
+  wrapper_tmp="$(mktemp "${wrapper_dir}/.rulesy.XXXXXX")"
+
+  if ! {
+    printf '%s\n' \
+      '#!/usr/bin/env bash' \
+      'set -euo pipefail' \
+      'exec "${HOME}/bin/rulesy" "$@"' >"${wrapper_tmp}" &&
+      chmod 0755 "${wrapper_tmp}"
+  }; then
+    rm -f "${wrapper_tmp}"
+    log "Could not create the Rulesy dof entrypoint." >&2
+    exit 1
+  fi
+
+  if [[ -e "${DOF_RULESY_BIN}" || -L "${DOF_RULESY_BIN}" ]]; then
+    if [[ -f "${DOF_RULESY_BIN}" && ! -L "${DOF_RULESY_BIN}" &&
+      -x "${DOF_RULESY_BIN}" ]] && cmp -s "${wrapper_tmp}" "${DOF_RULESY_BIN}"; then
+      rm -f "${wrapper_tmp}"
+      log "Rulesy dof entrypoint is installed: ${DOF_RULESY_BIN}"
+      return
+    fi
+
+    rm -f "${wrapper_tmp}"
+    log "Cannot install Rulesy dof entrypoint because '${DOF_RULESY_BIN}' already exists." >&2
+    exit 1
+  fi
+
+  mv "${wrapper_tmp}" "${DOF_RULESY_BIN}"
+  log "Installed Rulesy dof entrypoint: ${DOF_RULESY_BIN}"
+}
 
 backup_target() {
   local target_file="$1"
@@ -247,6 +305,9 @@ else
 
   log "GNU Stow installed: $(command -v stow)"
 fi
+
+install_rulesy
+install_rulesy_for_dof
 
 resolve_link_target() {
   local link_path="$1"

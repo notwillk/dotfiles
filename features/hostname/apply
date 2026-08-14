@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+FEATURE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PATH="${HOME}/.dof/bin:${PATH}"
+
+dof run rulesy \
+  "--config=${FEATURE_ROOT}/rulesy.yaml" \
+  check \
+  --fix

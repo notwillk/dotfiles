@@ -144,6 +144,14 @@ run_case() {
         fi
       }
 
+      seed_rulesy() {
+        local home="$1"
+
+        mkdir -p "${home}/bin"
+        : >"${home}/bin/rulesy"
+        chmod 0755 "${home}/bin/rulesy"
+      }
+
       assert_installed_ownership() {
         assert_directory_not_symlink "${HOME}/.ssh"
         assert_directory_not_symlink "${HOME}/.ssh/config.d"
@@ -219,8 +227,13 @@ run_case() {
       }
 
       run_normal_lifecycle() {
+        seed_rulesy "${HOME}"
         expect_pass "syntax: install.sh" bash -n ./install.sh
         expect_pass "syntax: features/default/apply" bash -n ./features/default/apply
+        expect_pass "syntax: features/hostname/apply" bash -n ./features/hostname/apply
+        expect_pass "syntax: features/hostname/desired-hostname" \
+          bash -n ./features/hostname/desired-hostname
+        expect_pass "syntax: features/macos-gui/apply" bash -n ./features/macos-gui/apply
         expect_pass "syntax: uninstall.sh" bash -n ./uninstall.sh
         expect_pass "syntax: verify.sh" bash -n ./verify.sh
         run_dotfile_tests
@@ -234,15 +247,18 @@ run_case() {
         expect_fail "uninstall with missing HOME" env HOME=/tmp/does-not-exist ./uninstall.sh
 
         mkdir -p /tmp/conflict-home
+        seed_rulesy /tmp/conflict-home
         printf "not managed by stow\n" > /tmp/conflict-home/managed_by_dofiles.md
         expect_fail "install with existing target conflict" env HOME=/tmp/conflict-home ./features/default/apply
 
         mkdir -p /tmp/initial-file-directory-conflict/.ssh/config
+        seed_rulesy /tmp/initial-file-directory-conflict
         expect_fail \
           "install with initial file directory conflict" \
           env HOME=/tmp/initial-file-directory-conflict ./features/default/apply
 
         mkdir -p /tmp/codex-backup-home/.codex
+        seed_rulesy /tmp/codex-backup-home
         printf "local codex config\n" > /tmp/codex-backup-home/.codex/config.toml
         expect_pass \
           "install backs up existing Codex config under dotfiles backups" \
@@ -259,6 +275,7 @@ run_case() {
 
         if command -v su >/dev/null 2>&1; then
           mkdir -p /tmp/readonly-home
+          seed_rulesy /tmp/readonly-home
           chmod 0555 /tmp/readonly-home
           expect_fail \
             "install with read-only HOME" \
@@ -282,8 +299,13 @@ run_case() {
       }
 
       run_no_package_manager_case() {
+        seed_rulesy "${HOME}"
         expect_pass "syntax: install.sh" bash -n ./install.sh
         expect_pass "syntax: features/default/apply" bash -n ./features/default/apply
+        expect_pass "syntax: features/hostname/apply" bash -n ./features/hostname/apply
+        expect_pass "syntax: features/hostname/desired-hostname" \
+          bash -n ./features/hostname/desired-hostname
+        expect_pass "syntax: features/macos-gui/apply" bash -n ./features/macos-gui/apply
         expect_pass "syntax: uninstall.sh" bash -n ./uninstall.sh
         expect_pass "syntax: verify.sh" bash -n ./verify.sh
         run_dotfile_tests

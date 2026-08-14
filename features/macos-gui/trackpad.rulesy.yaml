@@ -1,0 +1,36 @@
+rules:
+  - name: Swipe between pages is off
+    skip-if: '[[ "$(uname -s)" != "Darwin" ]]'
+    check: |
+      set -e
+      test "$(defaults read NSGlobalDomain AppleEnableSwipeNavigateWithScrolls 2>/dev/null)" = 0
+      test "$(defaults -currentHost read NSGlobalDomain com.apple.trackpad.twoFingerHorizSwipeGesture 2>/dev/null)" = 0
+      test "$(defaults -currentHost read NSGlobalDomain com.apple.trackpad.threeFingerHorizSwipeGesture 2>/dev/null)" = 0
+      test "$(defaults read com.apple.AppleMultitouchTrackpad TrackpadTwoFingerHorizSwipeGesture 2>/dev/null)" = 0
+      test "$(defaults read com.apple.AppleMultitouchTrackpad TrackpadThreeFingerHorizSwipeGesture 2>/dev/null)" = 0
+      test "$(defaults read com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadTwoFingerHorizSwipeGesture 2>/dev/null)" = 0
+      test "$(defaults read com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerHorizSwipeGesture 2>/dev/null)" = 0
+    fix: |
+      set -e
+      defaults write NSGlobalDomain AppleEnableSwipeNavigateWithScrolls -bool false
+      defaults -currentHost write NSGlobalDomain com.apple.trackpad.twoFingerHorizSwipeGesture -int 0
+      defaults -currentHost write NSGlobalDomain com.apple.trackpad.threeFingerHorizSwipeGesture -int 0
+      defaults write com.apple.AppleMultitouchTrackpad TrackpadTwoFingerHorizSwipeGesture -int 0
+      defaults write com.apple.AppleMultitouchTrackpad TrackpadThreeFingerHorizSwipeGesture -int 0
+      defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadTwoFingerHorizSwipeGesture -int 0
+      defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerHorizSwipeGesture -int 0
+      killall cfprefsd >/dev/null 2>&1 || true
+
+  - name: Two-finger Notification Center swipe is off
+    skip-if: '[[ "$(uname -s)" != "Darwin" ]]'
+    check: |
+      set -e
+      test "$(defaults -currentHost read NSGlobalDomain com.apple.trackpad.twoFingerFromRightEdgeSwipeGesture 2>/dev/null)" = 0
+      test "$(defaults read com.apple.AppleMultitouchTrackpad TrackpadTwoFingerFromRightEdgeSwipeGesture 2>/dev/null)" = 0
+      test "$(defaults read com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadTwoFingerFromRightEdgeSwipeGesture 2>/dev/null)" = 0
+    fix: |
+      set -e
+      defaults -currentHost write NSGlobalDomain com.apple.trackpad.twoFingerFromRightEdgeSwipeGesture -int 0
+      defaults write com.apple.AppleMultitouchTrackpad TrackpadTwoFingerFromRightEdgeSwipeGesture -int 0
+      defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadTwoFingerFromRightEdgeSwipeGesture -int 0
+      killall cfprefsd >/dev/null 2>&1 || true

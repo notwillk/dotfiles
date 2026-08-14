@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fail() {
+  printf '[hostname/desired-hostname] %s\n' "$*" >&2
+  exit 1
+}
+
+[[ "$(uname -s)" == "Darwin" ]] || fail "hostname derivation is supported only on macOS"
+
+marketing_name="$(
+  ioreg -l -r -c IOPlatformDevice 2>/dev/null |
+    awk -F '"' '/"product-name"[[:space:]]*=/ { print $4; exit }'
+)"
+[[ -n "${marketing_name}" ]] || fail "could not determine the Mac marketing model name"
+
+case "${marketing_name}" in
+  "MacBook Pro"*) machine_type="mbp" ;;
+  "MacBook Air"*) machine_type="mba" ;;
+  "MacBook"*) machine_type="mb" ;;
+  "iMac Pro"*) machine_type="imacp" ;;
+  "iMac"*) machine_type="imac" ;;
+  "Mac mini"*) machine_type="mm" ;;
+  "Mac Studio"*) machine_type="ms" ;;
+  "Mac Pro"*) machine_type="mp" ;;
+  *) fail "unsupported Mac model: ${marketing_name}" ;;
+esac
+
+hardware_profile="$(system_profiler SPHardwareDataType 2>/dev/null)"
+chip_name="$(
+  awk -F ': ' '/^[[:space:]]*Chip:/ { print $2; exit }' <<<"${hardware_profile}"
+)"
+
+if [[ ! "${chip_name}" =~ ^Apple[[:space:]]+M([0-9]+)([[:space:]]+(Pro|Max|Ultra))?$ ]]; then
+  fail "unsupported chip description: ${chip_name:-unknown}"
+fi
+
+chip_type="m${BASH_REMATCH[1]}"
+case "${BASH_REMATCH[3]:-}" in
+  Pro) chip_type+="p" ;;
+  Max) chip_type+="m" ;;
+  Ultra) chip_type+="u" ;;
+esac
+
+if [[ ! "${marketing_name}" =~ (^|[^0-9])((19|20)[0-9]{2})([^0-9]|$) ]]; then
+  fail "could not determine the model year from: ${marketing_name}"
+fi
+model_year="${BASH_REMATCH[2]}"
+
+printf '%s-%s-%s\n' "${machine_type}" "${chip_type}" "${model_year}"
