@@ -69,6 +69,18 @@ seed_dof() {
   cp "${DOF_BIN}" "${home}/.dof/bin/dof"
 }
 
+select_default_only() {
+  local home="$1"
+  local feature
+
+  for feature in hostname legacy macos-gui; do
+    HOME="${home}" "${DOF_BIN}" feature disable "${feature}"
+  done
+
+  [[ "$(HOME="${home}" "${DOF_BIN}" features --json)" == '["default"]' ]] ||
+    fail "default-only selection unexpectedly enabled another feature"
+}
+
 run_bootstrap_test() {
   local home="${TEST_ROOT}/bootstrap-home"
   local fake_bin="${TEST_ROOT}/fake-bin"
@@ -88,6 +100,10 @@ mkdir -p "$DEST"
 cat >"$DEST/dof" <<'DOF'
 #!/bin/sh
 printf '%s\n' "$*" >>"$HOME/dof-calls"
+if [ "$1" = clone ]; then
+  mkdir -p "$HOME/.dof/workspace"
+  : >"$HOME/.dof/config.yaml"
+fi
 DOF
 chmod 0755 "$DEST/dof"
 INSTALLER
@@ -96,10 +112,18 @@ CURL
 
   HOME="${home}" PATH="${fake_bin}:${PATH}" "${REPO_ROOT}/install.sh"
   [[ -x "${home}/.dof/bin/dof" ]] || fail "bootstrap did not install the home-local dof binary"
+  [[ ! -e "${home}/.dof/.default-selection-pending" ]] ||
+    fail "successful bootstrap left the default-selection marker behind"
   [[ "$(sed -n '1p' "${home}/dof-calls")" == "clone https://github.com/notwillk/dotfiles.git" ]] ||
     fail "bootstrap did not clone the expected repository first"
-  [[ "$(sed -n '2p' "${home}/dof-calls")" == "apply" ]] ||
-    fail "bootstrap did not apply after clone"
+  [[ "$(sed -n '2p' "${home}/dof-calls")" == "feature disable hostname" ]] ||
+    fail "fresh bootstrap did not disable hostname"
+  [[ "$(sed -n '3p' "${home}/dof-calls")" == "feature disable legacy" ]] ||
+    fail "fresh bootstrap did not disable legacy"
+  [[ "$(sed -n '4p' "${home}/dof-calls")" == "feature disable macos-gui" ]] ||
+    fail "fresh bootstrap did not disable macos-gui"
+  [[ "$(sed -n '5p' "${home}/dof-calls")" == "apply" ]] ||
+    fail "bootstrap did not apply after selecting only default"
 
   cat >"${fake_bin}/curl" <<'CURL'
 #!/bin/sh
@@ -107,8 +131,15 @@ printf 'curl must not run when the requested dof binary exists\n' >&2
 exit 99
 CURL
   HOME="${home}" PATH="${fake_bin}:${PATH}" "${REPO_ROOT}/install.sh"
-  [[ "$(wc -l <"${home}/dof-calls")" -eq 4 ]] ||
-    fail "bootstrap rerun did not invoke clone and apply exactly once"
+  [[ "$(wc -l <"${home}/dof-calls")" -eq 7 ]] ||
+    fail "bootstrap rerun did not invoke only clone and apply"
+  [[ "$(sed -n '6p' "${home}/dof-calls")" == "clone https://github.com/notwillk/dotfiles.git" &&
+    "$(sed -n '7p' "${home}/dof-calls")" == "apply" ]] ||
+    fail "bootstrap rerun did not preserve the existing feature selection"
+  for feature in hostname legacy macos-gui; do
+    [[ "$(grep -cFx "feature disable ${feature}" "${home}/dof-calls")" -eq 1 ]] ||
+      fail "bootstrap rerun changed the ${feature} feature selection"
+  done
 
   local failure_home="${TEST_ROOT}/bootstrap-failure-home"
   mkdir -p "${failure_home}/.dof/bin"
@@ -116,6 +147,8 @@ CURL
 #!/bin/sh
 printf '%s\n' "$*" >>"$HOME/dof-calls"
 if [ "$1" = clone ]; then
+  mkdir -p "$HOME/.dof/workspace"
+  : >"$HOME/.dof/config.yaml"
   exit 17
 fi
 DOF
@@ -125,6 +158,28 @@ DOF
   fi
   [[ "$(wc -l <"${failure_home}/dof-calls")" -eq 1 ]] ||
     fail "bootstrap continued to apply after clone failed"
+  [[ -f "${failure_home}/.dof/.default-selection-pending" ]] ||
+    fail "failed fresh bootstrap did not retain its resumable selection marker"
+
+  cat >"${failure_home}/.dof/bin/dof" <<'DOF'
+#!/bin/sh
+printf '%s\n' "$*" >>"$HOME/dof-calls"
+if [ "$1" = clone ]; then
+  mkdir -p "$HOME/.dof/workspace"
+  : >"$HOME/.dof/config.yaml"
+fi
+DOF
+  chmod 0755 "${failure_home}/.dof/bin/dof"
+  HOME="${failure_home}" PATH="${fake_bin}:${PATH}" "${REPO_ROOT}/install.sh"
+  [[ ! -e "${failure_home}/.dof/.default-selection-pending" ]] ||
+    fail "bootstrap retry did not clear the resumed selection marker"
+  [[ "$(sed -n '2p' "${failure_home}/dof-calls")" == \
+    "clone https://github.com/notwillk/dotfiles.git" &&
+    "$(sed -n '3p' "${failure_home}/dof-calls")" == "feature disable hostname" &&
+    "$(sed -n '4p' "${failure_home}/dof-calls")" == "feature disable legacy" &&
+    "$(sed -n '5p' "${failure_home}/dof-calls")" == "feature disable macos-gui" &&
+    "$(sed -n '6p' "${failure_home}/dof-calls")" == "apply" ]] ||
+    fail "bootstrap retry did not finish default-only selection before apply"
 
   if env -u HOME "${REPO_ROOT}/install.sh"; then
     fail "bootstrap accepted an unset HOME"
@@ -205,8 +260,8 @@ run_default_rulesy_contract_test() {
   local expected_command
   local -a prior_managers=()
 
-  [[ "$(cat "${main_config}")" == $'rules:\n  - remote: gpg.rulesy.yaml\n  - remote: stow.rulesy.yaml\n  - remote: home-files.rulesy.yaml' ]] ||
-    fail "default rulesy.yaml must contain only the ordered GPG, Stow, and home-files remotes"
+  [[ "$(cat "${main_config}")" == $'rules:\n  - remote: gpg.rulesy.yaml' ]] ||
+    fail "default rulesy.yaml must contain only the GPG remote"
   [[ "$(grep -c '^  - name: GPG is installed with ' "${config}")" -eq 10 ]] ||
     fail "GPG configuration does not contain exactly ten installer rules"
   [[ "$(grep -c '^    check: command -v gpg >/dev/null 2>&1$' "${config}")" -eq 11 ]] ||
@@ -355,8 +410,7 @@ run_normal_home_test() {
   printf 'unmanaged\n' >"${home}/keep/file"
 
   HOME="${home}" "${DOF_BIN}" clone "${SNAPSHOT_URL}"
-  [[ "$(HOME="${home}" "${DOF_BIN}" features --json)" == '["default","hostname","macos-gui"]' ]] ||
-    fail "dof did not discover exactly the intended features"
+  select_default_only "${home}"
   HOME="${home}" "${DOF_BIN}" apply
   [[ -f "${home}/.dof/bin/rulesy" && ! -L "${home}/.dof/bin/rulesy" &&
     -x "${home}/.dof/bin/rulesy" ]] ||
@@ -364,23 +418,36 @@ run_normal_home_test() {
   [[ "$(sed -n '1p' "${home}/rulesy-calls")" == \
     "--config=${home}/.dof/workspace/features/default/rulesy.yaml check --fix" ]] ||
     fail "default did not invoke Rulesy through dof with fixes enabled"
-  [[ "$(sed -n '2p' "${home}/rulesy-calls")" == \
-    "--config=${home}/.dof/workspace/features/hostname/rulesy.yaml check --fix" ]] ||
-    fail "hostname did not invoke Rulesy through dof with the expected arguments"
-  [[ "$(sed -n '3p' "${home}/rulesy-calls")" == \
-    "--config=${home}/.dof/workspace/features/macos-gui/rulesy.yaml check --fix --non-interactive" ]] ||
-    fail "macos-gui did not invoke Rulesy through dof with the expected arguments"
+  [[ "$(wc -l <"${home}/rulesy-calls")" -eq 1 ]] ||
+    fail "default-only apply invoked an optional feature"
+  HOME="${home}" "${home}/.dof/workspace/verify.sh"
 
   [[ -f "${home}/.bashrc" && ! -L "${home}/.bashrc" ]] ||
     fail "initial .bashrc is not a regular file"
-  assert_link_contains "${home}/managed_by_dofiles.md" ".dof/workspace/home"
+  [[ ! -e "${home}/managed_by_dofiles.md" && ! -L "${home}/managed_by_dofiles.md" ]] ||
+    fail "default-only apply unexpectedly linked the legacy home package"
   [[ "$(cat "${home}/keep/file")" == "unmanaged" ]] ||
     fail "apply changed an unrelated file"
+
+  HOME="${home}" "${DOF_BIN}" feature enable legacy
+  [[ "$(HOME="${home}" "${DOF_BIN}" features --json)" == '["default","legacy"]' ]] ||
+    fail "enabling legacy selected an unexpected feature set"
+  HOME="${home}" "${DOF_BIN}" apply
+  [[ "$(sed -n '2p' "${home}/rulesy-calls")" == \
+    "--config=${home}/.dof/workspace/features/default/rulesy.yaml check --fix" ]] ||
+    fail "legacy apply did not rerun default first"
+  [[ "$(sed -n '3p' "${home}/rulesy-calls")" == \
+    "--config=${home}/.dof/workspace/features/legacy/rulesy.yaml check --fix" ]] ||
+    fail "enabled legacy did not invoke its Rulesy configuration"
+  assert_link_contains "${home}/managed_by_dofiles.md" ".dof/workspace/home"
 
   HOME="${home}" "${DOF_BIN}" apply
   [[ "$(sed -n '4p' "${home}/rulesy-calls")" == \
     "--config=${home}/.dof/workspace/features/default/rulesy.yaml check --fix" ]] ||
-    fail "reapply did not rerun the default Rulesy configuration first"
+    fail "reapply did not rerun default first"
+  [[ "$(sed -n '5p' "${home}/rulesy-calls")" == \
+    "--config=${home}/.dof/workspace/features/legacy/rulesy.yaml check --fix" ]] ||
+    fail "reapply did not rerun legacy second"
   assert_link_contains "${home}/managed_by_dofiles.md" ".dof/workspace/home"
   compgen -G "${home}/.dotfiles/backups/.bashrc.backup.*" >/dev/null ||
     fail "reapply did not back up the copied initial file"
@@ -405,8 +472,13 @@ run_symlinked_codex_test() {
   ln -s "${external}" "${home}/.codex"
 
   HOME="${home}" "${DOF_BIN}" clone "${SNAPSHOT_URL}"
+  select_default_only "${home}"
   HOME="${home}" "${DOF_BIN}" apply
   assert_link_contains "${external}/config.toml" ".dof/workspace/home/.codex/config.toml"
+  HOME="${home}" "${home}/.dof/workspace/verify.sh"
+  HOME="${home}" "${home}/.dof/workspace/uninstall.sh"
+  [[ ! -e "${external}/config.toml" && ! -L "${external}/config.toml" ]] ||
+    fail "default-only uninstall left the managed Codex link"
 }
 
 run_legacy_handoff_test() {
@@ -416,9 +488,12 @@ run_legacy_handoff_test() {
   mkdir -p "${home}"
 
   HOME="${home}" "${SNAPSHOT}/features/default/apply"
+  HOME="${home}" "${SNAPSHOT}/features/legacy/apply"
   assert_link_contains "${home}/managed_by_dofiles.md" "/snapshot/home"
 
   HOME="${home}" "${DOF_BIN}" clone "${SNAPSHOT_URL}"
+  select_default_only "${home}"
+  HOME="${home}" "${DOF_BIN}" feature enable legacy
   HOME="${home}" "${DOF_BIN}" apply
   assert_link_contains "${home}/managed_by_dofiles.md" ".dof/workspace/home"
   assert_link_contains "${home}/.codex/config.toml" ".dof/workspace/home/.codex/config.toml"
@@ -434,11 +509,14 @@ run_ambiguous_legacy_test() {
   ln -s "${unrelated}" "${home}/managed_by_dofiles.md"
 
   HOME="${home}" "${DOF_BIN}" clone "${SNAPSHOT_URL}"
+  select_default_only "${home}"
+  HOME="${home}" "${DOF_BIN}" feature enable legacy
   if HOME="${home}" "${DOF_BIN}" apply; then
     fail "apply accepted an ambiguous legacy marker"
   fi
-  [[ -L "${home}/managed_by_dofiles.md" && ! -e "${home}/.bashrc" ]] ||
-    fail "ambiguous handoff changed the home before failing"
+  [[ -L "${home}/managed_by_dofiles.md" &&
+    "$(readlink "${home}/managed_by_dofiles.md")" == "${unrelated}" ]] ||
+    fail "ambiguous handoff changed the unmanaged marker"
 }
 
 run_bootstrap_test

@@ -1,4 +1,2 @@
 rules:
   - remote: gpg.rulesy.yaml
-  - remote: stow.rulesy.yaml
-  - remote: home-files.rulesy.yaml

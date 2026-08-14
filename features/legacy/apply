@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fail() {
+  printf '[legacy/apply] CRITICAL: %s\n' "$*" >&2
+  exit 1
+}
+
+if [[ -z "${HOME:-}" ]]; then
+  fail "HOME is not set; refusing to manage an unknown target directory."
+fi
+
+if [[ ! -d "${HOME}" ]]; then
+  fail "HOME is set to '${HOME}', but that directory does not exist."
+fi
+
+FEATURE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DOF_BIN="${HOME}/.dof/bin/dof"
+RULESY_BIN="${HOME}/.dof/bin/rulesy"
+
+[[ -x "${DOF_BIN}" ]] || fail "Expected dof executable '${DOF_BIN}' is unavailable."
+[[ -x "${RULESY_BIN}" ]] ||
+  fail "Rulesy is unavailable; enable and apply the default feature before legacy."
+command -v gpg >/dev/null 2>&1 ||
+  fail "GPG is unavailable; enable and apply the default feature before legacy."
+
+"${DOF_BIN}" run rulesy \
+  "--config=${FEATURE_ROOT}/rulesy.yaml" \
+  check \
+  --fix

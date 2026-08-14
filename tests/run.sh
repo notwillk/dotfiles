@@ -240,8 +240,9 @@ RULESY
         seed_rulesy "${HOME}"
         expect_pass "syntax: install.sh" bash -n ./install.sh
         expect_pass "syntax: features/default/apply" bash -n ./features/default/apply
+        expect_pass "syntax: features/legacy/apply" bash -n ./features/legacy/apply
         expect_pass "syntax: shared home-files helper" \
-          bash -n ./features/default/scripts/stow-home-files
+          bash -n ./features/legacy/scripts/stow-home-files
         expect_pass "contract: Stow Rulesy" ./tests/stow-rulesy-contract.sh .
         expect_pass "syntax: features/hostname/apply" bash -n ./features/hostname/apply
         expect_pass "syntax: features/hostname/desired-hostname" \
@@ -252,18 +253,21 @@ RULESY
         expect_pass "syntax: verify.sh" bash -n ./verify.sh
         run_dotfile_tests
 
-        expect_fail "install with HOME unset" env -u HOME ./features/default/apply
+        expect_fail "default apply with HOME unset" env -u HOME ./features/default/apply
+        expect_fail "legacy apply with HOME unset" env -u HOME ./features/legacy/apply
         expect_fail "verify with HOME unset" env -u HOME ./verify.sh
         expect_fail "uninstall with HOME unset" env -u HOME ./uninstall.sh
 
-        expect_fail "install with missing HOME" env HOME=/tmp/does-not-exist ./features/default/apply
+        expect_fail "default apply with missing HOME" env HOME=/tmp/does-not-exist ./features/default/apply
+        expect_fail "legacy apply with missing HOME" env HOME=/tmp/does-not-exist ./features/legacy/apply
         expect_fail "verify with missing HOME" env HOME=/tmp/does-not-exist ./verify.sh
         expect_fail "uninstall with missing HOME" env HOME=/tmp/does-not-exist ./uninstall.sh
 
         mkdir -p /tmp/conflict-home
         seed_rulesy /tmp/conflict-home
         printf "not managed by stow\n" > /tmp/conflict-home/managed_by_dofiles.md
-        expect_fail "install with existing target conflict" env HOME=/tmp/conflict-home ./features/default/apply
+        expect_pass "default apply before legacy conflict" env HOME=/tmp/conflict-home ./features/default/apply
+        expect_fail "legacy apply with existing target conflict" env HOME=/tmp/conflict-home ./features/legacy/apply
 
         mkdir -p /tmp/initial-file-directory-conflict/.ssh/config
         seed_rulesy /tmp/initial-file-directory-conflict
@@ -300,10 +304,12 @@ RULESY
         fi
 
         expect_fail "verify before install" ./verify.sh
-        expect_pass "install" ./features/default/apply
+        expect_pass "apply default" ./features/default/apply
+        expect_pass "apply legacy" ./features/legacy/apply
         assert_installed_ownership
         expect_pass "verify after install" ./verify.sh
-        expect_pass "second install backs up copied initial files" ./features/default/apply
+        expect_pass "reapply default backs up copied initial files" ./features/default/apply
+        expect_pass "reapply legacy" ./features/legacy/apply
         assert_glob_exists "${HOME}/.dotfiles/backups/.gitconfig.backup.*"
         assert_glob_exists "${HOME}/.dotfiles/backups/.ssh/config.backup.*"
         assert_installed_ownership
@@ -316,8 +322,9 @@ RULESY
         seed_rulesy "${HOME}"
         expect_pass "syntax: install.sh" bash -n ./install.sh
         expect_pass "syntax: features/default/apply" bash -n ./features/default/apply
+        expect_pass "syntax: features/legacy/apply" bash -n ./features/legacy/apply
         expect_pass "syntax: shared home-files helper" \
-          bash -n ./features/default/scripts/stow-home-files
+          bash -n ./features/legacy/scripts/stow-home-files
         expect_pass "contract: Stow Rulesy" ./tests/stow-rulesy-contract.sh .
         expect_pass "syntax: features/hostname/apply" bash -n ./features/hostname/apply
         expect_pass "syntax: features/hostname/desired-hostname" \
@@ -329,7 +336,8 @@ RULESY
         run_dotfile_tests
 
         expect_fail "verify before install" ./verify.sh
-        expect_fail "install without stow or package manager" ./features/default/apply
+        expect_pass "apply default without stow" ./features/default/apply
+        expect_fail "apply legacy without stow or package manager" ./features/legacy/apply
         expect_fail "verify after failed install" ./verify.sh
         expect_fail "uninstall without stow" ./uninstall.sh
       }

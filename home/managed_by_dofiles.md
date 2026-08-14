@@ -1,8 +1,8 @@
 # This Home Directory Is Managed By Dotfiles
 
-This home is managed from a Git repository by dof. During the current
-transition, dof runs GNU Stow to create the managed symlinks and retains a few
-copied shell, Git, and SSH entrypoint files.
+This home is managed from a Git repository by dof. The opt-in `legacy`
+feature runs GNU Stow to create these managed symlinks. The `default` feature
+retains a few copied shell, Git, and SSH entrypoint files.
 
 Repository: <https://github.com/notwillk/dotfiles>
 
@@ -30,11 +30,21 @@ git -C "$HOME/.dof/workspace" pull --ff-only
 "$HOME/.dof/workspace/verify.sh"
 ```
 
-The default dof feature installs `$HOME/bin/rulesy` when needed. Rulesy then
-installs GPG and GNU Stow, verifies the complete home package, and refreshes
-managed links through the shared lifecycle helper. The feature preserves
-backups under `$HOME/.dotfiles/backups`, copies the initial entrypoint files,
-and manages the separate Codex config link. Reapplying is supported.
+The default dof feature installs Rulesy and GPG, preserves backups under the
+dotfiles state directory, copies the initial entrypoint files, and manages the
+separate Codex config link. The enabled `legacy` feature installs GNU Stow,
+verifies the complete home package, and refreshes these managed links through
+the shared lifecycle helper. Reapplying is supported.
+
+On a machine where legacy links are not wanted, disable them with:
+
+```sh
+"$HOME/.dof/bin/dof" feature disable legacy
+"$HOME/.dof/bin/dof" apply
+```
+
+Disabling the feature prevents future reconciliation; run `uninstall.sh` first
+if the existing Stow-managed links should also be removed.
 
 On macOS, the `macos-gui` feature uses Rulesy to install Homebrew, append its
 desired formula, casks, and App Store entries to `$HOME/.Brewfile`, and

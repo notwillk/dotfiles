@@ -1,0 +1,3 @@
+rules:
+  - remote: stow.rulesy.yaml
+  - remote: home-files.rulesy.yaml

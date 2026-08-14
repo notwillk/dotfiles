@@ -2,11 +2,13 @@
 set -euo pipefail
 
 REPO_ROOT="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-CONFIG="${REPO_ROOT}/features/default/stow.rulesy.yaml"
-HOME_CONFIG="${REPO_ROOT}/features/default/home-files.rulesy.yaml"
-MAIN_CONFIG="${REPO_ROOT}/features/default/rulesy.yaml"
-APPLY_HOOK="${REPO_ROOT}/features/default/apply"
-HELPER="${REPO_ROOT}/features/default/scripts/stow-home-files"
+CONFIG="${REPO_ROOT}/features/legacy/stow.rulesy.yaml"
+HOME_CONFIG="${REPO_ROOT}/features/legacy/home-files.rulesy.yaml"
+DEFAULT_CONFIG="${REPO_ROOT}/features/default/rulesy.yaml"
+LEGACY_CONFIG="${REPO_ROOT}/features/legacy/rulesy.yaml"
+DEFAULT_APPLY="${REPO_ROOT}/features/default/apply"
+LEGACY_APPLY="${REPO_ROOT}/features/legacy/apply"
+HELPER="${REPO_ROOT}/features/legacy/scripts/stow-home-files"
 
 fail() {
   printf '[tests/stow-rulesy-contract.sh] %s\n' "$*" >&2
@@ -23,15 +25,18 @@ rule_block() {
   ' "${CONFIG}"
 }
 
-[[ "$(cat "${MAIN_CONFIG}")" == $'rules:\n  - remote: gpg.rulesy.yaml\n  - remote: stow.rulesy.yaml\n  - remote: home-files.rulesy.yaml' ]] ||
-  fail "default rulesy.yaml must contain only the ordered GPG, Stow, and home-files remotes"
+[[ "$(cat "${DEFAULT_CONFIG}")" == $'rules:\n  - remote: gpg.rulesy.yaml' ]] ||
+  fail "default rulesy.yaml must contain only the GPG remote"
+[[ "$(cat "${LEGACY_CONFIG}")" == $'rules:\n  - remote: stow.rulesy.yaml\n  - remote: home-files.rulesy.yaml' ]] ||
+  fail "legacy rulesy.yaml must contain only the ordered Stow and home-files remotes"
 
 [[ "$(cat "${HOME_CONFIG}")" == $'rules:\n  - name: Home files are linked from the active dof workspace\n    skip-if: |\n      ! command -v gpg >/dev/null 2>&1 ||\n        ! command -v stow >/dev/null 2>&1\n    check: ./scripts/stow-home-files check\n    fix: ./scripts/stow-home-files apply' ]] ||
   fail "home-files.rulesy.yaml does not have the expected guarded helper lifecycle"
 
-if grep -Eiq '\bstow\b' "${APPLY_HOOK}"; then
+if grep -Eiq '\bstow\b' "${DEFAULT_APPLY}"; then
   fail "features/default/apply must not contain direct Stow behavior"
 fi
+[[ -x "${LEGACY_APPLY}" ]] || fail "the legacy apply hook must be executable"
 
 [[ -x "${HELPER}" ]] || fail "the shared Stow home-files helper must be executable"
 grep -Fq -- '--simulate' "${HELPER}" || fail "helper check must simulate"

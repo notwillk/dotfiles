@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO_ROOT="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-HELPER="${REPO_ROOT}/features/default/scripts/stow-home-files"
+HELPER="${REPO_ROOT}/features/legacy/scripts/stow-home-files"
 TEST_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-home-files-helper.XXXXXX")"
 trap 'rm -rf "${TEST_ROOT}"' EXIT
 

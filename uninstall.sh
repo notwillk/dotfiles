@@ -58,8 +58,9 @@ if [[ -n "${ACCOUNT_HOME}" && "${HOME}" != "${ACCOUNT_HOME}" ]]; then
 fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DOF_BIN="${HOME}/.dof/bin/dof"
 HOME_PAYLOAD_PATH="${REPO_ROOT}/home"
-HOME_FILES_HELPER="${REPO_ROOT}/features/default/scripts/stow-home-files"
+HOME_FILES_HELPER="${REPO_ROOT}/features/legacy/scripts/stow-home-files"
 CODEX_SOURCE_PATH="${HOME_PAYLOAD_PATH}/.codex"
 CODEX_TARGET_PATH="${HOME}/.codex"
 
@@ -68,9 +69,23 @@ if [[ ! -d "${HOME_PAYLOAD_PATH}" ]]; then
   exit 1
 fi
 
-if [[ ! -x "${HOME_FILES_HELPER}" ]]; then
-  log "Expected home-files helper '${HOME_FILES_HELPER}' is not executable." >&2
+if [[ ! -x "${DOF_BIN}" ]]; then
+  log "Expected dof executable '${DOF_BIN}' is not available." >&2
   exit 1
+fi
+
+if ! ENABLED_FEATURES="$("${DOF_BIN}" features --json)"; then
+  log "Could not determine which dof features are enabled." >&2
+  exit 1
+fi
+
+LEGACY_ENABLED=0
+if [[ "${ENABLED_FEATURES}" == *'"legacy"'* ]]; then
+  LEGACY_ENABLED=1
+  if [[ ! -x "${HOME_FILES_HELPER}" ]]; then
+    log "Expected home-files helper '${HOME_FILES_HELPER}' is not executable." >&2
+    exit 1
+  fi
 fi
 
 unlink_codex_config() {
@@ -94,6 +109,11 @@ unlink_codex_config() {
 }
 
 unlink_codex_config
-"${HOME_FILES_HELPER}" uninstall
-log "Dotfiles symlinks removed from '${HOME}'."
-log "GNU Stow was not uninstalled."
+if [[ "${LEGACY_ENABLED}" -eq 1 ]]; then
+  "${HOME_FILES_HELPER}" uninstall
+  log "Legacy Stow-managed links removed from '${HOME}'."
+  log "GNU Stow was not uninstalled."
+else
+  log "Legacy feature is disabled; no Stow-managed links were removed."
+fi
+log "Managed dotfiles links removed from '${HOME}'."

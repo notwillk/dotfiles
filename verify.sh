@@ -58,8 +58,9 @@ if [[ -n "${ACCOUNT_HOME}" && "${HOME}" != "${ACCOUNT_HOME}" ]]; then
 fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DOF_BIN="${HOME}/.dof/bin/dof"
 HOME_PAYLOAD_PATH="${REPO_ROOT}/home"
-HOME_FILES_HELPER="${REPO_ROOT}/features/default/scripts/stow-home-files"
+HOME_FILES_HELPER="${REPO_ROOT}/features/legacy/scripts/stow-home-files"
 CODEX_SOURCE_PATH="${HOME_PAYLOAD_PATH}/.codex"
 CODEX_TARGET_PATH="${HOME}/.codex"
 
@@ -68,9 +69,23 @@ if [[ ! -d "${HOME_PAYLOAD_PATH}" ]]; then
   exit 1
 fi
 
-if [[ ! -x "${HOME_FILES_HELPER}" ]]; then
-  log "Expected home-files helper '${HOME_FILES_HELPER}' is not executable." >&2
+if [[ ! -x "${DOF_BIN}" ]]; then
+  log "Expected dof executable '${DOF_BIN}' is not available." >&2
   exit 1
+fi
+
+if ! ENABLED_FEATURES="$("${DOF_BIN}" features --json)"; then
+  log "Could not determine which dof features are enabled." >&2
+  exit 1
+fi
+
+LEGACY_ENABLED=0
+if [[ "${ENABLED_FEATURES}" == *'"legacy"'* ]]; then
+  LEGACY_ENABLED=1
+  if [[ ! -x "${HOME_FILES_HELPER}" ]]; then
+    log "Expected home-files helper '${HOME_FILES_HELPER}' is not executable." >&2
+    exit 1
+  fi
 fi
 
 verify_codex_config() {
@@ -97,10 +112,14 @@ verify_codex_config() {
   log "Codex config is correctly linked: ${target_file}"
 }
 
-log "Verifying managed home links in '${HOME}'..."
-if ! "${HOME_FILES_HELPER}" check; then
-  log "Home files are not fully linked. Run '${HOME}/.dof/bin/dof apply' to apply them." >&2
-  exit 1
+if [[ "${LEGACY_ENABLED}" -eq 1 ]]; then
+  log "Verifying legacy Stow-managed home links in '${HOME}'..."
+  if ! "${HOME_FILES_HELPER}" check; then
+    log "Legacy home files are not fully linked. Run '${HOME}/.dof/bin/dof apply' to apply them." >&2
+    exit 1
+  fi
+else
+  log "Legacy feature is disabled; skipping Stow-managed home-link verification."
 fi
 
 if ! verify_codex_config; then

@@ -2,17 +2,33 @@
 
 Personal dotfiles orchestrated by [dof](https://github.com/notwillk/dof).
 
-The transitional `default` feature uses Rulesy to install GPG and GNU Stow,
-then checks and reconciles the existing `home/` payload through a shared Stow
-lifecycle helper. The feature hook itself retains only Rulesy bootstrap,
-copied `initial-files/`, and the special Codex config link. Human-facing
-update and recovery notes are installed as `managed_by_dofiles.md`.
+A fresh installation explicitly enables only `default`. That feature installs
+Rulesy and GPG, copies `initial-files/`, and manages the special Codex config
+link. The optional `legacy` feature installs GNU Stow and reconciles the
+existing `home/` payload through a shared Stow lifecycle helper. It is never
+enabled by the bootstrap.
+
+Install the default feature set with:
+
+```sh
+curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
+  https://raw.githubusercontent.com/notwillk/dotfiles/main/install.sh | bash
+```
+
+To opt into the transitional Stow-managed home links:
+
+```sh
+"$HOME/.dof/bin/dof" feature enable legacy
+"$HOME/.dof/bin/dof" apply
+```
+
+The `hostname` and `macos-gui` features are also disabled on a fresh install.
+Enable either one explicitly with `dof feature enable <name>` before applying.
 
 GPG and Stow use the first supported package manager already present on the
-machine, with Homebrew preferred before the supported system managers. A
-missing prerequisite fails before home links, copied initial files, or the
-Codex link are changed. This remains post-bootstrap maintenance: dof's own
-installer must still be able to complete before the default feature can run.
+machine, with Homebrew preferred before the supported system managers. GPG is
+post-bootstrap maintenance: dof's own installer must still be able to complete
+before the default feature can run.
 
 The `macos-gui` feature uses Rulesy to install Homebrew, append its desired
 formula, casks, and App Store entries to `$HOME/.Brewfile`, and reconcile them
