@@ -88,6 +88,10 @@ mkdir -p "$DEST"
 cat >"$DEST/dof" <<'DOF'
 #!/bin/sh
 printf '%s\n' "$*" >>"$HOME/dof-calls"
+if [ "$1" = clone ]; then
+  mkdir -p "$HOME/.dof/workspace"
+  : >"$HOME/.dof/config.yaml"
+fi
 DOF
 chmod 0755 "$DEST/dof"
 INSTALLER
@@ -98,8 +102,10 @@ CURL
   [[ -x "${home}/.dof/bin/dof" ]] || fail "bootstrap did not install the home-local dof binary"
   [[ "$(sed -n '1p' "${home}/dof-calls")" == "clone https://github.com/notwillk/dotfiles.git" ]] ||
     fail "bootstrap did not clone the expected repository first"
-  [[ "$(sed -n '2p' "${home}/dof-calls")" == "apply" ]] ||
-    fail "bootstrap did not apply after clone"
+  [[ "$(sed -n '2p' "${home}/dof-calls")" == "feature disable macos-gui" ]] ||
+    fail "fresh bootstrap did not disable the opt-in macos-gui feature"
+  [[ "$(sed -n '3p' "${home}/dof-calls")" == "apply" ]] ||
+    fail "bootstrap did not apply after selecting fresh-install features"
 
   cat >"${fake_bin}/curl" <<'CURL'
 #!/bin/sh
@@ -107,8 +113,13 @@ printf 'curl must not run when the requested dof binary exists\n' >&2
 exit 99
 CURL
   HOME="${home}" PATH="${fake_bin}:${PATH}" "${REPO_ROOT}/install.sh"
-  [[ "$(wc -l <"${home}/dof-calls")" -eq 4 ]] ||
-    fail "bootstrap rerun did not invoke clone and apply exactly once"
+  [[ "$(wc -l <"${home}/dof-calls")" -eq 5 ]] ||
+    fail "bootstrap rerun did not invoke only clone and apply"
+  [[ "$(sed -n '4p' "${home}/dof-calls")" == "clone https://github.com/notwillk/dotfiles.git" &&
+    "$(sed -n '5p' "${home}/dof-calls")" == "apply" ]] ||
+    fail "bootstrap rerun did not preserve the existing feature selection"
+  [[ "$(grep -cFx 'feature disable macos-gui' "${home}/dof-calls")" -eq 1 ]] ||
+    fail "bootstrap rerun changed the macos-gui feature selection"
 
   local failure_home="${TEST_ROOT}/bootstrap-failure-home"
   mkdir -p "${failure_home}/.dof/bin"

@@ -22,8 +22,10 @@ copied as regular files.
 
 ## Lifecycle
 
-- `./install.sh` bootstraps `$HOME/.dof/bin/dof`, clones this repository, and
-  runs `dof apply`.
+- `./install.sh` bootstraps `$HOME/.dof/bin/dof`, clones this repository,
+  explicitly disables `macos-gui` for a fresh dof state, and runs `dof apply`.
+  Installer reruns preserve the existing feature selection; users opt in with
+  `dof feature enable macos-gui`.
 - `features/default/apply` is the idempotent feature hook and underlying
   installer. After installing Rulesy, it runs the default Rulesy configuration
   with fixes enabled before copying initial files or linking Codex config.
