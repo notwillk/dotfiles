@@ -8,6 +8,7 @@ rules:
       [[ "${major:-}" =~ ^[0-9]+$ && "${minor:-}" =~ ^[0-9]+$ ]] || exit 0
       (( major < 10 || (major == 10 && minor < 14) ))
     check: |
+      set -e
       test -d "$HOME/Screenshots"
       test "$(defaults read com.apple.screencapture location 2>/dev/null)" = "$HOME/Screenshots"
     fix: |

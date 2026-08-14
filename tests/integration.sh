@@ -226,6 +226,28 @@ SYSTEM_PROFILER
   fi
 }
 
+run_rulesy_shell_safety_test() {
+  local file
+  local expected
+  local actual
+
+  while read -r file expected; do
+    actual="$(grep -c '^      set -e$' "${SNAPSHOT}/${file}" || true)"
+    [[ "${actual}" -eq "${expected}" ]] ||
+      fail "${file} has ${actual} strict shell blocks; expected ${expected}"
+  done <<'STRICT_BLOCKS'
+features/macos-gui/accessibility.rulesy.yaml 1
+features/macos-gui/appearance.rulesy.yaml 1
+features/macos-gui/screenshots.rulesy.yaml 1
+features/macos-gui/hot-corners.rulesy.yaml 1
+features/hostname/rulesy.yaml 2
+STRICT_BLOCKS
+
+  grep -Fqx '      killall Dock >/dev/null 2>&1 || true' \
+    "${SNAPSHOT}/features/macos-gui/hot-corners.rulesy.yaml" ||
+    fail "Hot Corners does not tolerate Dock already being stopped"
+}
+
 run_normal_home_test() {
   local home="${TEST_ROOT}/normal-home"
   seed_rulesy "${home}"
@@ -317,6 +339,7 @@ run_ambiguous_legacy_test() {
 run_bootstrap_test
 run_rulesy_install_test
 run_hostname_derivation_test
+run_rulesy_shell_safety_test
 run_normal_home_test
 run_symlinked_codex_test
 run_legacy_handoff_test

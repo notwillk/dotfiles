@@ -2,6 +2,7 @@ rules:
   - name: Control-scroll screen zoom is enabled
     skip-if: '[[ "$(uname -s)" != "Darwin" ]]'
     check: |
+      set -e
       test "$(defaults read com.apple.universalaccess closeViewScrollWheelToggle 2>/dev/null)" = 1
       test "$(defaults read com.apple.universalaccess HIDScrollZoomModifierMask 2>/dev/null)" = 262144
     fix: |

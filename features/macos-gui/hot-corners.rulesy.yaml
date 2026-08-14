@@ -8,6 +8,7 @@ rules:
       [[ "${major:-}" =~ ^[0-9]+$ && "${minor:-}" =~ ^[0-9]+$ ]] || exit 0
       (( major < 10 || (major == 10 && minor < 14) ))
     check: |
+      set -e
       test "$(defaults read com.apple.dock wvous-tl-corner 2>/dev/null)" = 6
       test "$(defaults read com.apple.dock wvous-tl-modifier 2>/dev/null)" = 0
       test "$(defaults read com.apple.dock wvous-tr-corner 2>/dev/null)" = 6
@@ -25,4 +26,4 @@ rules:
       defaults write com.apple.dock wvous-bl-modifier -int 1048576
       defaults write com.apple.dock wvous-br-corner -int 13
       defaults write com.apple.dock wvous-br-modifier -int 1048576
-      killall Dock
+      killall Dock >/dev/null 2>&1 || true
