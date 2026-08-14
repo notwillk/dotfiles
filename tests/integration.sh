@@ -4,6 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DOF_BIN="${DOF_BIN:-$(command -v dof || true)}"
+RULESY_BIN="${RULESY_BIN:-$(command -v rulesy || true)}"
+export RULESY_TEST_BIN="${RULESY_BIN}"
 
 fail() {
   printf '[tests/integration.sh] %s\n' "$*" >&2
@@ -11,6 +13,7 @@ fail() {
 }
 
 [[ -x "${DOF_BIN}" ]] || fail "dof is required"
+[[ -x "${RULESY_BIN}" ]] || fail "Rulesy is required"
 command -v git >/dev/null 2>&1 || fail "git is required"
 command -v stow >/dev/null 2>&1 || fail "GNU Stow is required"
 
@@ -54,6 +57,7 @@ case "$*" in
     fi
     ;;
 esac
+exec "${RULESY_TEST_BIN}" "$@"
 RULESY
   chmod 0755 "${home}/bin/rulesy"
 }
@@ -201,14 +205,16 @@ run_default_rulesy_contract_test() {
   local expected_command
   local -a prior_managers=()
 
-  [[ "$(cat "${main_config}")" == $'rules:\n  - remote: gpg.rulesy.yaml' ]] ||
-    fail "default rulesy.yaml must contain only the GPG remote"
+  [[ "$(cat "${main_config}")" == $'rules:\n  - remote: gpg.rulesy.yaml\n  - remote: stow.rulesy.yaml\n  - remote: home-files.rulesy.yaml' ]] ||
+    fail "default rulesy.yaml must contain only the ordered GPG, Stow, and home-files remotes"
   [[ "$(grep -c '^  - name: GPG is installed with ' "${config}")" -eq 10 ]] ||
     fail "GPG configuration does not contain exactly ten installer rules"
-  [[ "$(grep -c '^    check: command -v gpg >/dev/null 2>&1$' "${config}")" -eq 10 ]] ||
-    fail "every GPG installer rule must check the exact gpg executable"
+  [[ "$(grep -c '^    check: command -v gpg >/dev/null 2>&1$' "${config}")" -eq 11 ]] ||
+    fail "every GPG installer and the final invariant must check the exact executable"
   [[ "$(grep -c '^      command -v gpg >/dev/null 2>&1 ||$' "${config}")" -eq 10 ]] ||
     fail "every GPG installer rule must skip when gpg already exists"
+  [[ "$(grep -c '^  - name: GPG is available$' "${config}")" -eq 1 ]] ||
+    fail "GPG configuration must finish with an availability invariant"
   [[ "$(grep -c '^    fix: brew install gnupg$' "${config}")" -eq 1 ]] ||
     fail "Homebrew GPG repair must be non-interactive"
   [[ "$(grep -c '^    interactive-fix: |$' "${config}")" -eq 9 ]] ||
@@ -255,6 +261,8 @@ apk apk gnupg run_privileged apk add gnupg
 xbps-install xbps-install gnupg2 run_privileged xbps-install -Sy gnupg2
 pkg pkg gnupg run_privileged pkg install -y gnupg
 GPG_MANAGERS
+
+  "${SNAPSHOT}/tests/stow-rulesy-contract.sh" "${SNAPSHOT}"
 }
 
 run_default_rulesy_failure_test() {
@@ -437,6 +445,7 @@ run_bootstrap_test
 run_rulesy_install_test
 run_default_rulesy_contract_test
 run_default_rulesy_failure_test
+"${SNAPSHOT}/tests/home-files-helper-integration.sh" "${SNAPSHOT}"
 run_hostname_derivation_test
 run_rulesy_shell_safety_test
 run_normal_home_test

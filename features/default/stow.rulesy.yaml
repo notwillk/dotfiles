@@ -1,0 +1,300 @@
+rules:
+  - name: GNU Stow is installed with Homebrew
+    skip-if: |
+      command -v stow >/dev/null 2>&1 ||
+        ! command -v brew >/dev/null 2>&1
+    check: command -v stow >/dev/null 2>&1
+    fix: brew install stow
+
+  - name: GNU Stow is installed with apt-get as root
+    skip-if: |
+      command -v stow >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        ! command -v apt-get >/dev/null 2>&1 ||
+        [[ "${EUID:-$(id -u)}" -ne 0 ]]
+    check: command -v stow >/dev/null 2>&1
+    fix: |
+      set -e
+      apt-get update
+      apt-get install -y stow
+
+  - name: GNU Stow is installed with apt-get using sudo
+    skip-if: |
+      command -v stow >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        ! command -v apt-get >/dev/null 2>&1 ||
+        [[ "${EUID:-$(id -u)}" -eq 0 ]]
+    check: command -v stow >/dev/null 2>&1
+    interactive-fix: |
+      set -e
+      if ! command -v sudo >/dev/null 2>&1; then
+        printf 'GNU Stow installation requires root or sudo.\n' >&2
+        exit 1
+      fi
+      sudo apt-get update
+      sudo apt-get install -y stow
+
+  - name: GNU Stow is installed with apt as root
+    skip-if: |
+      command -v stow >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        ! command -v apt >/dev/null 2>&1 ||
+        [[ "${EUID:-$(id -u)}" -ne 0 ]]
+    check: command -v stow >/dev/null 2>&1
+    fix: |
+      set -e
+      apt update
+      apt install -y stow
+
+  - name: GNU Stow is installed with apt using sudo
+    skip-if: |
+      command -v stow >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        ! command -v apt >/dev/null 2>&1 ||
+        [[ "${EUID:-$(id -u)}" -eq 0 ]]
+    check: command -v stow >/dev/null 2>&1
+    interactive-fix: |
+      set -e
+      if ! command -v sudo >/dev/null 2>&1; then
+        printf 'GNU Stow installation requires root or sudo.\n' >&2
+        exit 1
+      fi
+      sudo apt update
+      sudo apt install -y stow
+
+  - name: GNU Stow is installed with dnf as root
+    skip-if: |
+      command -v stow >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        command -v apt >/dev/null 2>&1 ||
+        ! command -v dnf >/dev/null 2>&1 ||
+        [[ "${EUID:-$(id -u)}" -ne 0 ]]
+    check: command -v stow >/dev/null 2>&1
+    fix: dnf install -y stow
+
+  - name: GNU Stow is installed with dnf using sudo
+    skip-if: |
+      command -v stow >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        command -v apt >/dev/null 2>&1 ||
+        ! command -v dnf >/dev/null 2>&1 ||
+        [[ "${EUID:-$(id -u)}" -eq 0 ]]
+    check: command -v stow >/dev/null 2>&1
+    interactive-fix: |
+      if ! command -v sudo >/dev/null 2>&1; then
+        printf 'GNU Stow installation requires root or sudo.\n' >&2
+        exit 1
+      fi
+      sudo dnf install -y stow
+
+  - name: GNU Stow is installed with yum as root
+    skip-if: |
+      command -v stow >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        command -v apt >/dev/null 2>&1 ||
+        command -v dnf >/dev/null 2>&1 ||
+        ! command -v yum >/dev/null 2>&1 ||
+        [[ "${EUID:-$(id -u)}" -ne 0 ]]
+    check: command -v stow >/dev/null 2>&1
+    fix: yum install -y stow
+
+  - name: GNU Stow is installed with yum using sudo
+    skip-if: |
+      command -v stow >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        command -v apt >/dev/null 2>&1 ||
+        command -v dnf >/dev/null 2>&1 ||
+        ! command -v yum >/dev/null 2>&1 ||
+        [[ "${EUID:-$(id -u)}" -eq 0 ]]
+    check: command -v stow >/dev/null 2>&1
+    interactive-fix: |
+      if ! command -v sudo >/dev/null 2>&1; then
+        printf 'GNU Stow installation requires root or sudo.\n' >&2
+        exit 1
+      fi
+      sudo yum install -y stow
+
+  - name: GNU Stow is installed with pacman as root
+    skip-if: |
+      command -v stow >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        command -v apt >/dev/null 2>&1 ||
+        command -v dnf >/dev/null 2>&1 ||
+        command -v yum >/dev/null 2>&1 ||
+        ! command -v pacman >/dev/null 2>&1 ||
+        [[ "${EUID:-$(id -u)}" -ne 0 ]]
+    check: command -v stow >/dev/null 2>&1
+    fix: pacman -Sy --noconfirm stow
+
+  - name: GNU Stow is installed with pacman using sudo
+    skip-if: |
+      command -v stow >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        command -v apt >/dev/null 2>&1 ||
+        command -v dnf >/dev/null 2>&1 ||
+        command -v yum >/dev/null 2>&1 ||
+        ! command -v pacman >/dev/null 2>&1 ||
+        [[ "${EUID:-$(id -u)}" -eq 0 ]]
+    check: command -v stow >/dev/null 2>&1
+    interactive-fix: |
+      if ! command -v sudo >/dev/null 2>&1; then
+        printf 'GNU Stow installation requires root or sudo.\n' >&2
+        exit 1
+      fi
+      sudo pacman -Sy --noconfirm stow
+
+  - name: GNU Stow is installed with zypper as root
+    skip-if: |
+      command -v stow >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        command -v apt >/dev/null 2>&1 ||
+        command -v dnf >/dev/null 2>&1 ||
+        command -v yum >/dev/null 2>&1 ||
+        command -v pacman >/dev/null 2>&1 ||
+        ! command -v zypper >/dev/null 2>&1 ||
+        [[ "${EUID:-$(id -u)}" -ne 0 ]]
+    check: command -v stow >/dev/null 2>&1
+    fix: zypper --non-interactive install stow
+
+  - name: GNU Stow is installed with zypper using sudo
+    skip-if: |
+      command -v stow >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        command -v apt >/dev/null 2>&1 ||
+        command -v dnf >/dev/null 2>&1 ||
+        command -v yum >/dev/null 2>&1 ||
+        command -v pacman >/dev/null 2>&1 ||
+        ! command -v zypper >/dev/null 2>&1 ||
+        [[ "${EUID:-$(id -u)}" -eq 0 ]]
+    check: command -v stow >/dev/null 2>&1
+    interactive-fix: |
+      if ! command -v sudo >/dev/null 2>&1; then
+        printf 'GNU Stow installation requires root or sudo.\n' >&2
+        exit 1
+      fi
+      sudo zypper --non-interactive install stow
+
+  - name: GNU Stow is installed with apk as root
+    skip-if: |
+      command -v stow >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        command -v apt >/dev/null 2>&1 ||
+        command -v dnf >/dev/null 2>&1 ||
+        command -v yum >/dev/null 2>&1 ||
+        command -v pacman >/dev/null 2>&1 ||
+        command -v zypper >/dev/null 2>&1 ||
+        ! command -v apk >/dev/null 2>&1 ||
+        [[ "${EUID:-$(id -u)}" -ne 0 ]]
+    check: command -v stow >/dev/null 2>&1
+    fix: apk add stow
+
+  - name: GNU Stow is installed with apk using sudo
+    skip-if: |
+      command -v stow >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        command -v apt >/dev/null 2>&1 ||
+        command -v dnf >/dev/null 2>&1 ||
+        command -v yum >/dev/null 2>&1 ||
+        command -v pacman >/dev/null 2>&1 ||
+        command -v zypper >/dev/null 2>&1 ||
+        ! command -v apk >/dev/null 2>&1 ||
+        [[ "${EUID:-$(id -u)}" -eq 0 ]]
+    check: command -v stow >/dev/null 2>&1
+    interactive-fix: |
+      if ! command -v sudo >/dev/null 2>&1; then
+        printf 'GNU Stow installation requires root or sudo.\n' >&2
+        exit 1
+      fi
+      sudo apk add stow
+
+  - name: GNU Stow is installed with xbps-install as root
+    skip-if: |
+      command -v stow >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        command -v apt >/dev/null 2>&1 ||
+        command -v dnf >/dev/null 2>&1 ||
+        command -v yum >/dev/null 2>&1 ||
+        command -v pacman >/dev/null 2>&1 ||
+        command -v zypper >/dev/null 2>&1 ||
+        command -v apk >/dev/null 2>&1 ||
+        ! command -v xbps-install >/dev/null 2>&1 ||
+        [[ "${EUID:-$(id -u)}" -ne 0 ]]
+    check: command -v stow >/dev/null 2>&1
+    fix: xbps-install -Sy stow
+
+  - name: GNU Stow is installed with xbps-install using sudo
+    skip-if: |
+      command -v stow >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        command -v apt >/dev/null 2>&1 ||
+        command -v dnf >/dev/null 2>&1 ||
+        command -v yum >/dev/null 2>&1 ||
+        command -v pacman >/dev/null 2>&1 ||
+        command -v zypper >/dev/null 2>&1 ||
+        command -v apk >/dev/null 2>&1 ||
+        ! command -v xbps-install >/dev/null 2>&1 ||
+        [[ "${EUID:-$(id -u)}" -eq 0 ]]
+    check: command -v stow >/dev/null 2>&1
+    interactive-fix: |
+      if ! command -v sudo >/dev/null 2>&1; then
+        printf 'GNU Stow installation requires root or sudo.\n' >&2
+        exit 1
+      fi
+      sudo xbps-install -Sy stow
+
+  - name: GNU Stow is installed with pkg as root
+    skip-if: |
+      command -v stow >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        command -v apt >/dev/null 2>&1 ||
+        command -v dnf >/dev/null 2>&1 ||
+        command -v yum >/dev/null 2>&1 ||
+        command -v pacman >/dev/null 2>&1 ||
+        command -v zypper >/dev/null 2>&1 ||
+        command -v apk >/dev/null 2>&1 ||
+        command -v xbps-install >/dev/null 2>&1 ||
+        ! command -v pkg >/dev/null 2>&1 ||
+        [[ "${EUID:-$(id -u)}" -ne 0 ]]
+    check: command -v stow >/dev/null 2>&1
+    fix: pkg install -y stow
+
+  - name: GNU Stow is installed with pkg using sudo
+    skip-if: |
+      command -v stow >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        command -v apt >/dev/null 2>&1 ||
+        command -v dnf >/dev/null 2>&1 ||
+        command -v yum >/dev/null 2>&1 ||
+        command -v pacman >/dev/null 2>&1 ||
+        command -v zypper >/dev/null 2>&1 ||
+        command -v apk >/dev/null 2>&1 ||
+        command -v xbps-install >/dev/null 2>&1 ||
+        ! command -v pkg >/dev/null 2>&1 ||
+        [[ "${EUID:-$(id -u)}" -eq 0 ]]
+    check: command -v stow >/dev/null 2>&1
+    interactive-fix: |
+      if ! command -v sudo >/dev/null 2>&1; then
+        printf 'GNU Stow installation requires root or sudo.\n' >&2
+        exit 1
+      fi
+      sudo pkg install -y stow
+
+  - name: GNU Stow is available
+    check: command -v stow >/dev/null 2>&1
+    hint: Install GNU Stow with Homebrew or another supported system package manager.

@@ -30,9 +30,11 @@ git -C "$HOME/.dof/workspace" pull --ff-only
 "$HOME/.dof/workspace/verify.sh"
 ```
 
-The default dof feature installs GNU Stow and `$HOME/bin/rulesy` when needed,
-preserves backups under `$HOME/.dotfiles/backups`, copies the initial
-entrypoint files, and refreshes managed links. Reapplying is supported.
+The default dof feature installs `$HOME/bin/rulesy` when needed. Rulesy then
+installs GPG and GNU Stow, verifies the complete home package, and refreshes
+managed links through the shared lifecycle helper. The feature preserves
+backups under `$HOME/.dotfiles/backups`, copies the initial entrypoint files,
+and manages the separate Codex config link. Reapplying is supported.
 
 On macOS, the `macos-gui` feature uses Rulesy to install Homebrew, append its
 desired formula, casks, and App Store entries to `$HOME/.Brewfile`, and

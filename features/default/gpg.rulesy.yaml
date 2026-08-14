@@ -214,3 +214,7 @@ rules:
         fi
       }
       run_privileged pkg install -y gnupg
+
+  - name: GPG is available
+    check: command -v gpg >/dev/null 2>&1
+    hint: Install GPG with Homebrew or another supported system package manager.
