@@ -1,0 +1,216 @@
+rules:
+  - name: GPG is installed with Homebrew
+    skip-if: |
+      command -v gpg >/dev/null 2>&1 ||
+        ! command -v brew >/dev/null 2>&1
+    check: command -v gpg >/dev/null 2>&1
+    fix: brew install gnupg
+
+  - name: GPG is installed with apt-get
+    skip-if: |
+      command -v gpg >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        ! command -v apt-get >/dev/null 2>&1
+    check: command -v gpg >/dev/null 2>&1
+    interactive-fix: |
+      run_privileged() {
+        if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+          "$@"
+        elif command -v sudo >/dev/null 2>&1; then
+          sudo "$@"
+        else
+          printf 'GPG installation requires root or sudo.\n' >&2
+          return 1
+        fi
+      }
+      run_privileged apt-get update
+      run_privileged apt-get install -y gnupg
+
+  - name: GPG is installed with apt
+    skip-if: |
+      command -v gpg >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        ! command -v apt >/dev/null 2>&1
+    check: command -v gpg >/dev/null 2>&1
+    interactive-fix: |
+      run_privileged() {
+        if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+          "$@"
+        elif command -v sudo >/dev/null 2>&1; then
+          sudo "$@"
+        else
+          printf 'GPG installation requires root or sudo.\n' >&2
+          return 1
+        fi
+      }
+      run_privileged apt update
+      run_privileged apt install -y gnupg
+
+  - name: GPG is installed with dnf
+    skip-if: |
+      command -v gpg >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        command -v apt >/dev/null 2>&1 ||
+        ! command -v dnf >/dev/null 2>&1
+    check: command -v gpg >/dev/null 2>&1
+    interactive-fix: |
+      run_privileged() {
+        if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+          "$@"
+        elif command -v sudo >/dev/null 2>&1; then
+          sudo "$@"
+        else
+          printf 'GPG installation requires root or sudo.\n' >&2
+          return 1
+        fi
+      }
+      run_privileged dnf install -y gnupg2
+
+  - name: GPG is installed with yum
+    skip-if: |
+      command -v gpg >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        command -v apt >/dev/null 2>&1 ||
+        command -v dnf >/dev/null 2>&1 ||
+        ! command -v yum >/dev/null 2>&1
+    check: command -v gpg >/dev/null 2>&1
+    interactive-fix: |
+      run_privileged() {
+        if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+          "$@"
+        elif command -v sudo >/dev/null 2>&1; then
+          sudo "$@"
+        else
+          printf 'GPG installation requires root or sudo.\n' >&2
+          return 1
+        fi
+      }
+      run_privileged yum install -y gnupg2
+
+  - name: GPG is installed with pacman
+    skip-if: |
+      command -v gpg >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        command -v apt >/dev/null 2>&1 ||
+        command -v dnf >/dev/null 2>&1 ||
+        command -v yum >/dev/null 2>&1 ||
+        ! command -v pacman >/dev/null 2>&1
+    check: command -v gpg >/dev/null 2>&1
+    interactive-fix: |
+      run_privileged() {
+        if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+          "$@"
+        elif command -v sudo >/dev/null 2>&1; then
+          sudo "$@"
+        else
+          printf 'GPG installation requires root or sudo.\n' >&2
+          return 1
+        fi
+      }
+      run_privileged pacman -Sy --noconfirm gnupg
+
+  - name: GPG is installed with zypper
+    skip-if: |
+      command -v gpg >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        command -v apt >/dev/null 2>&1 ||
+        command -v dnf >/dev/null 2>&1 ||
+        command -v yum >/dev/null 2>&1 ||
+        command -v pacman >/dev/null 2>&1 ||
+        ! command -v zypper >/dev/null 2>&1
+    check: command -v gpg >/dev/null 2>&1
+    interactive-fix: |
+      run_privileged() {
+        if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+          "$@"
+        elif command -v sudo >/dev/null 2>&1; then
+          sudo "$@"
+        else
+          printf 'GPG installation requires root or sudo.\n' >&2
+          return 1
+        fi
+      }
+      run_privileged zypper --non-interactive install gpg2
+
+  - name: GPG is installed with apk
+    skip-if: |
+      command -v gpg >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        command -v apt >/dev/null 2>&1 ||
+        command -v dnf >/dev/null 2>&1 ||
+        command -v yum >/dev/null 2>&1 ||
+        command -v pacman >/dev/null 2>&1 ||
+        command -v zypper >/dev/null 2>&1 ||
+        ! command -v apk >/dev/null 2>&1
+    check: command -v gpg >/dev/null 2>&1
+    interactive-fix: |
+      run_privileged() {
+        if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+          "$@"
+        elif command -v sudo >/dev/null 2>&1; then
+          sudo "$@"
+        else
+          printf 'GPG installation requires root or sudo.\n' >&2
+          return 1
+        fi
+      }
+      run_privileged apk add gnupg
+
+  - name: GPG is installed with xbps-install
+    skip-if: |
+      command -v gpg >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        command -v apt >/dev/null 2>&1 ||
+        command -v dnf >/dev/null 2>&1 ||
+        command -v yum >/dev/null 2>&1 ||
+        command -v pacman >/dev/null 2>&1 ||
+        command -v zypper >/dev/null 2>&1 ||
+        command -v apk >/dev/null 2>&1 ||
+        ! command -v xbps-install >/dev/null 2>&1
+    check: command -v gpg >/dev/null 2>&1
+    interactive-fix: |
+      run_privileged() {
+        if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+          "$@"
+        elif command -v sudo >/dev/null 2>&1; then
+          sudo "$@"
+        else
+          printf 'GPG installation requires root or sudo.\n' >&2
+          return 1
+        fi
+      }
+      run_privileged xbps-install -Sy gnupg2
+
+  - name: GPG is installed with pkg
+    skip-if: |
+      command -v gpg >/dev/null 2>&1 ||
+        command -v brew >/dev/null 2>&1 ||
+        command -v apt-get >/dev/null 2>&1 ||
+        command -v apt >/dev/null 2>&1 ||
+        command -v dnf >/dev/null 2>&1 ||
+        command -v yum >/dev/null 2>&1 ||
+        command -v pacman >/dev/null 2>&1 ||
+        command -v zypper >/dev/null 2>&1 ||
+        command -v apk >/dev/null 2>&1 ||
+        command -v xbps-install >/dev/null 2>&1 ||
+        ! command -v pkg >/dev/null 2>&1
+    check: command -v gpg >/dev/null 2>&1
+    interactive-fix: |
+      run_privileged() {
+        if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+          "$@"
+        elif command -v sudo >/dev/null 2>&1; then
+          sudo "$@"
+        else
+          printf 'GPG installation requires root or sudo.\n' >&2
+          return 1
+        fi
+      }
+      run_privileged pkg install -y gnupg

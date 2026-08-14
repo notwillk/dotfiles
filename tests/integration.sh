@@ -47,6 +47,13 @@ seed_rulesy() {
   cat >"${home}/bin/rulesy" <<'RULESY'
 #!/bin/sh
 printf '%s\n' "$*" >>"${HOME}/rulesy-calls"
+case "$*" in
+  *"/features/default/rulesy.yaml "*)
+    if [ "${FAIL_DEFAULT_RULESY:-0}" = 1 ]; then
+      exit 23
+    fi
+    ;;
+esac
 RULESY
   chmod 0755 "${home}/bin/rulesy"
 }
@@ -125,6 +132,7 @@ run_rulesy_install_test() {
   local fake_bin="${TEST_ROOT}/rulesy-fake-bin"
 
   mkdir -p "${home}" "${fake_bin}"
+  seed_dof "${home}"
   cat >"${fake_bin}/curl" <<'CURL'
 #!/bin/sh
 case "$*" in
@@ -178,6 +186,89 @@ CURL
   fi
   [[ ! -e "${failure_home}/bin/rulesy" && ! -e "${failure_home}/.bashrc" ]] ||
     fail "failed Rulesy installation continued into dotfile changes"
+}
+
+run_default_rulesy_contract_test() {
+  local config="${SNAPSHOT}/features/default/gpg.rulesy.yaml"
+  local main_config="${SNAPSHOT}/features/default/rulesy.yaml"
+  local previous_line=0
+  local line
+  local rule_name
+  local rule_block
+  local manager
+  local higher_manager
+  local package
+  local expected_command
+  local -a prior_managers=()
+
+  [[ "$(cat "${main_config}")" == $'rules:\n  - remote: gpg.rulesy.yaml' ]] ||
+    fail "default rulesy.yaml must contain only the GPG remote"
+  [[ "$(grep -c '^  - name: GPG is installed with ' "${config}")" -eq 10 ]] ||
+    fail "GPG configuration does not contain exactly ten installer rules"
+  [[ "$(grep -c '^    check: command -v gpg >/dev/null 2>&1$' "${config}")" -eq 10 ]] ||
+    fail "every GPG installer rule must check the exact gpg executable"
+  [[ "$(grep -c '^      command -v gpg >/dev/null 2>&1 ||$' "${config}")" -eq 10 ]] ||
+    fail "every GPG installer rule must skip when gpg already exists"
+  [[ "$(grep -c '^    fix: brew install gnupg$' "${config}")" -eq 1 ]] ||
+    fail "Homebrew GPG repair must be non-interactive"
+  [[ "$(grep -c '^    interactive-fix: |$' "${config}")" -eq 9 ]] ||
+    fail "system GPG repairs must remain interactive"
+  [[ "$(grep -cF '        if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then' "${config}")" -eq 9 ]] ||
+    fail "system GPG repairs must run directly as root"
+  [[ "$(grep -c '^        elif command -v sudo >/dev/null 2>&1; then$' "${config}")" -eq 9 ]] ||
+    fail "system GPG repairs must fall back to sudo"
+
+  while read -r rule_name manager package expected_command; do
+    line="$(grep -nFx "  - name: GPG is installed with ${rule_name}" "${config}" | cut -d: -f1)"
+    [[ -n "${line}" && "${line}" -gt "${previous_line}" ]] ||
+      fail "GPG manager precedence is incorrect at ${manager}"
+    previous_line="${line}"
+
+    rule_block="$(
+      awk -v heading="  - name: GPG is installed with ${rule_name}" '
+        $0 == heading { selected = 1; next }
+        selected && /^  - name:/ { exit }
+        selected { print }
+      ' "${config}"
+    )"
+    grep -Fq "! command -v ${manager} >/dev/null 2>&1" <<<"${rule_block}" ||
+      fail "GPG rule for ${manager} does not skip when its manager is absent"
+    for higher_manager in "${prior_managers[@]}"; do
+      grep -Fq "command -v ${higher_manager} >/dev/null 2>&1 ||" <<<"${rule_block}" ||
+        fail "GPG rule for ${manager} does not defer to ${higher_manager}"
+    done
+    prior_managers+=("${manager}")
+
+    if [[ "${manager}" != brew ]]; then
+      grep -Fqx "      ${expected_command}" <<<"${rule_block}" ||
+        fail "GPG rule for ${manager} does not install package ${package} correctly"
+    fi
+  done <<'GPG_MANAGERS'
+Homebrew brew gnupg brew install gnupg
+apt-get apt-get gnupg run_privileged apt-get install -y gnupg
+apt apt gnupg run_privileged apt install -y gnupg
+dnf dnf gnupg2 run_privileged dnf install -y gnupg2
+yum yum gnupg2 run_privileged yum install -y gnupg2
+pacman pacman gnupg run_privileged pacman -Sy --noconfirm gnupg
+zypper zypper gpg2 run_privileged zypper --non-interactive install gpg2
+apk apk gnupg run_privileged apk add gnupg
+xbps-install xbps-install gnupg2 run_privileged xbps-install -Sy gnupg2
+pkg pkg gnupg run_privileged pkg install -y gnupg
+GPG_MANAGERS
+}
+
+run_default_rulesy_failure_test() {
+  local home="${TEST_ROOT}/default-rulesy-failure-home"
+
+  seed_rulesy "${home}"
+  seed_dof "${home}"
+  mkdir -p "${home}"
+
+  if HOME="${home}" FAIL_DEFAULT_RULESY=1 "${SNAPSHOT}/features/default/apply"; then
+    fail "default apply ignored a Rulesy failure"
+  fi
+  [[ ! -e "${home}/.bashrc" && ! -L "${home}/managed_by_dofiles.md" ]] ||
+    fail "default Rulesy failure changed dotfile targets"
 }
 
 run_hostname_derivation_test() {
@@ -263,9 +354,12 @@ run_normal_home_test() {
     -x "${home}/.dof/bin/rulesy" ]] ||
     fail "default did not install a regular Rulesy dof entrypoint"
   [[ "$(sed -n '1p' "${home}/rulesy-calls")" == \
+    "--config=${home}/.dof/workspace/features/default/rulesy.yaml check --fix" ]] ||
+    fail "default did not invoke Rulesy through dof with fixes enabled"
+  [[ "$(sed -n '2p' "${home}/rulesy-calls")" == \
     "--config=${home}/.dof/workspace/features/hostname/rulesy.yaml check --fix" ]] ||
     fail "hostname did not invoke Rulesy through dof with the expected arguments"
-  [[ "$(sed -n '2p' "${home}/rulesy-calls")" == \
+  [[ "$(sed -n '3p' "${home}/rulesy-calls")" == \
     "--config=${home}/.dof/workspace/features/macos-gui/rulesy.yaml check --fix --non-interactive" ]] ||
     fail "macos-gui did not invoke Rulesy through dof with the expected arguments"
 
@@ -276,6 +370,9 @@ run_normal_home_test() {
     fail "apply changed an unrelated file"
 
   HOME="${home}" "${DOF_BIN}" apply
+  [[ "$(sed -n '4p' "${home}/rulesy-calls")" == \
+    "--config=${home}/.dof/workspace/features/default/rulesy.yaml check --fix" ]] ||
+    fail "reapply did not rerun the default Rulesy configuration first"
   assert_link_contains "${home}/managed_by_dofiles.md" ".dof/workspace/home"
   compgen -G "${home}/.dotfiles/backups/.bashrc.backup.*" >/dev/null ||
     fail "reapply did not back up the copied initial file"
@@ -338,6 +435,8 @@ run_ambiguous_legacy_test() {
 
 run_bootstrap_test
 run_rulesy_install_test
+run_default_rulesy_contract_test
+run_default_rulesy_failure_test
 run_hostname_derivation_test
 run_rulesy_shell_safety_test
 run_normal_home_test

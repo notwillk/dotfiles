@@ -6,6 +6,13 @@ The transitional `default` feature uses GNU Stow to link the existing `home/`
 payload and preserves the copied `initial-files/` behavior. Human-facing update
 and recovery notes are installed as `managed_by_dofiles.md`.
 
+The `default` feature also uses Rulesy to install GPG through the first
+supported package manager already present on the machine. It follows the same
+manager precedence as the Stow installer and skips cleanly when GPG is already
+installed or no supported manager is available. This is post-bootstrap
+maintenance: dof's own installer must still be able to complete before the
+default feature can run.
+
 The `macos-gui` feature uses Rulesy to install Homebrew, append its desired
 formula, casks, and App Store entries to `$HOME/.Brewfile`, and reconcile them
 through `brew bundle --global`. It keeps macOS screenshot storage pointed at
