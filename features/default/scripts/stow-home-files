@@ -86,8 +86,8 @@ validate_marker_ownership() {
   fi
 
   if [[ "${installed_marker}" != */home/managed_by_dofiles.md ]]; then
-    fail "CRITICAL: Marker '${MARKER_PATH}' points outside a recognizable dotfiles checkout: '${installed_marker}'."
-    fail "Remove or migrate that link manually before retrying dof apply."
+    log "CRITICAL: Marker '${MARKER_PATH}' points outside a recognizable dotfiles checkout: '${installed_marker}'." >&2
+    log "Remove or migrate that link manually before retrying dof apply." >&2
     return 1
   fi
 
