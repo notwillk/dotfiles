@@ -11,21 +11,15 @@ on_exit() {
 
 trap on_exit EXIT
 
-prepend_text() {
-  local prefix="$1"
-
-  awk -v p="$prefix" '{ print p " " $0; fflush(); }'
-}
-
 prepend() {
   local prefix="$1"; shift
 
   if command -v stdbuf >/dev/null 2>&1; then
-    stdbuf -oL -eL "$@" 2>&1 | prepend_text "$prefix"
+    stdbuf -oL -eL "$@" 2>&1 | awk -v p="$prefix" '{ print p " " $0; fflush(); }'
   elif command -v script >/dev/null 2>&1; then
-    script -q /dev/null "$@" 2>&1 | prepend_text "$prefix"
+    script -q /dev/null "$@" 2>&1 | awk -v p="$prefix" '{ print p " " $0; fflush(); }'
   else
-    "$@" 2>&1 | prepend_text "$prefix"
+    "$@" 2>&1 | awk -v p="$prefix" '{ print p " " $0; fflush(); }'
   fi
 }
 
@@ -64,12 +58,18 @@ if [[ -n "${ACCOUNT_HOME}" && "${HOME}" != "${ACCOUNT_HOME}" ]]; then
 fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DOTFILES_SOURCE_PATH="${REPO_ROOT}/home"
-CODEX_SOURCE_PATH="${DOTFILES_SOURCE_PATH}/.codex"
+HOME_PAYLOAD_PATH="${REPO_ROOT}/home"
+HOME_FILES_HELPER="${REPO_ROOT}/features/default/scripts/stow-home-files"
+CODEX_SOURCE_PATH="${HOME_PAYLOAD_PATH}/.codex"
 CODEX_TARGET_PATH="${HOME}/.codex"
 
-if [[ ! -d "${DOTFILES_SOURCE_PATH}" ]]; then
-  log "Expected Stow package directory '${DOTFILES_SOURCE_PATH}' does not exist." >&2
+if [[ ! -d "${HOME_PAYLOAD_PATH}" ]]; then
+  log "Expected home payload directory '${HOME_PAYLOAD_PATH}' does not exist." >&2
+  exit 1
+fi
+
+if [[ ! -x "${HOME_FILES_HELPER}" ]]; then
+  log "Expected home-files helper '${HOME_FILES_HELPER}' is not executable." >&2
   exit 1
 fi
 
@@ -97,51 +97,9 @@ verify_codex_config() {
   log "Codex config is correctly linked: ${target_file}"
 }
 
-if ! command -v stow >/dev/null 2>&1; then
-  log "GNU Stow is not installed. Cannot verify Stow-managed symlinks." >&2
-  log "Run '${HOME}/.dof/bin/dof apply' first." >&2
-  exit 1
-fi
-
-log "GNU Stow is installed: $(command -v stow)"
-
-STOW_PACKAGE="${DOTFILES_SOURCE_PATH#"${REPO_ROOT}/"}"
-STOW_VERBOSITY="${STOW_VERBOSITY:-${VERBOCITY:-1}}"
-STOW_COMMAND=(
-  stow
-  "--verbose=${STOW_VERBOSITY}"
-  --simulate
-  --stow
-  --dir "${REPO_ROOT}"
-  --target "${HOME}"
-  "${STOW_PACKAGE}"
-)
-
-log "Verifying links from '${DOTFILES_SOURCE_PATH}' in '${HOME}'..."
-printf -v STOW_COMMAND_DISPLAY "%q " "${STOW_COMMAND[@]}"
-log "Running \`${STOW_COMMAND_DISPLAY% }\`..."
-
-set +e
-STOW_OUTPUT="$("${STOW_COMMAND[@]}" 2>&1)"
-STOW_STATUS="$?"
-set -e
-
-if [[ -n "${STOW_OUTPUT}" ]]; then
-  printf '%s\n' "${STOW_OUTPUT}" | prepend_text "[stow]"
-fi
-
-if [[ "${STOW_STATUS}" -ne 0 ]]; then
-  log "Stow reported an error while verifying dotfiles." >&2
-  exit "${STOW_STATUS}"
-fi
-
-STOW_ACTION_OUTPUT="$(
-  printf '%s\n' "${STOW_OUTPUT}" | awk '$0 != "WARNING: in simulation mode so not modifying filesystem."'
-)"
-
-if [[ -n "${STOW_ACTION_OUTPUT}" ]]; then
-  log "Dotfiles are not fully linked. The simulated Stow run above shows pending changes." >&2
-  log "Run '${HOME}/.dof/bin/dof apply' to apply them." >&2
+log "Verifying managed home links in '${HOME}'..."
+if ! "${HOME_FILES_HELPER}" check; then
+  log "Home files are not fully linked. Run '${HOME}/.dof/bin/dof apply' to apply them." >&2
   exit 1
 fi
 

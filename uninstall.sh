@@ -58,12 +58,18 @@ if [[ -n "${ACCOUNT_HOME}" && "${HOME}" != "${ACCOUNT_HOME}" ]]; then
 fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DOTFILES_SOURCE_PATH="${REPO_ROOT}/home"
-CODEX_SOURCE_PATH="${DOTFILES_SOURCE_PATH}/.codex"
+HOME_PAYLOAD_PATH="${REPO_ROOT}/home"
+HOME_FILES_HELPER="${REPO_ROOT}/features/default/scripts/stow-home-files"
+CODEX_SOURCE_PATH="${HOME_PAYLOAD_PATH}/.codex"
 CODEX_TARGET_PATH="${HOME}/.codex"
 
-if [[ ! -d "${DOTFILES_SOURCE_PATH}" ]]; then
-  log "Expected Stow package directory '${DOTFILES_SOURCE_PATH}' does not exist." >&2
+if [[ ! -d "${HOME_PAYLOAD_PATH}" ]]; then
+  log "Expected home payload directory '${HOME_PAYLOAD_PATH}' does not exist." >&2
+  exit 1
+fi
+
+if [[ ! -x "${HOME_FILES_HELPER}" ]]; then
+  log "Expected home-files helper '${HOME_FILES_HELPER}' is not executable." >&2
   exit 1
 fi
 
@@ -87,29 +93,7 @@ unlink_codex_config() {
   log "Removed Codex config link: ${target_file}"
 }
 
-if ! command -v stow >/dev/null 2>&1; then
-  log "GNU Stow is not installed. Cannot remove Stow-managed symlinks." >&2
-  log "Install GNU Stow first, then rerun this script." >&2
-  exit 1
-fi
-
-log "GNU Stow is installed: $(command -v stow)"
-
-STOW_PACKAGE="${DOTFILES_SOURCE_PATH#"${REPO_ROOT}/"}"
-STOW_VERBOSITY="${STOW_VERBOSITY:-${VERBOCITY:-2}}"
-STOW_COMMAND=(
-  stow
-  "--verbose=${STOW_VERBOSITY}"
-  --delete
-  --dir "${REPO_ROOT}"
-  --target "${HOME}"
-  "${STOW_PACKAGE}"
-)
-
 unlink_codex_config
-log "Removing links from '${DOTFILES_SOURCE_PATH}' in '${HOME}'..."
-printf -v STOW_COMMAND_DISPLAY "%q " "${STOW_COMMAND[@]}"
-log "Running \`${STOW_COMMAND_DISPLAY% }\`..."
-prepend "[stow]" "${STOW_COMMAND[@]}"
+"${HOME_FILES_HELPER}" uninstall
 log "Dotfiles symlinks removed from '${HOME}'."
 log "GNU Stow was not uninstalled."

@@ -3,6 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+RULESY_BIN="${RULESY_BIN:-$(command -v rulesy || true)}"
 
 usage() {
   cat <<EOF
@@ -58,6 +59,8 @@ run_case() {
   tag="$(image_tag_for "${dockerfile}")"
   case_name="$(basename "${dockerfile}" .Dockerfile)"
 
+  [[ -x "${RULESY_BIN}" ]] || die "Rulesy is required; set RULESY_BIN to an executable Linux Rulesy binary"
+
   echo "[tests/run.sh] Building ${tag} from ${dockerfile}"
   docker build --file "${dockerfile}" --tag "${tag}" "${REPO_ROOT}"
 
@@ -65,6 +68,8 @@ run_case() {
   docker run --rm \
     --env HOME=/tmp/test-home \
     --mount "type=bind,src=${REPO_ROOT},dst=/workspace/dotfiles,readonly" \
+    --mount "type=bind,src=${RULESY_BIN},dst=/usr/local/bin/rulesy-test,readonly" \
+    --env RULESY_TEST_BIN=/usr/local/bin/rulesy-test \
     --workdir /workspace/dotfiles \
     --tmpfs /tmp:rw,nosuid,nodev,mode=1777 \
     --env TEST_CASE_NAME="${case_name}" \
@@ -148,7 +153,10 @@ run_case() {
         local home="$1"
 
         mkdir -p "${home}/bin" "${home}/.dof/bin"
-        : >"${home}/bin/rulesy"
+        cat >"${home}/bin/rulesy" <<'RULESY'
+#!/bin/sh
+exec "${RULESY_TEST_BIN}" "$@"
+RULESY
         chmod 0755 "${home}/bin/rulesy"
         cp ./tests/support/fake-dof.sh "${home}/.dof/bin/dof"
         chmod 0755 "${home}/.dof/bin/dof"
@@ -232,6 +240,9 @@ run_case() {
         seed_rulesy "${HOME}"
         expect_pass "syntax: install.sh" bash -n ./install.sh
         expect_pass "syntax: features/default/apply" bash -n ./features/default/apply
+        expect_pass "syntax: shared home-files helper" \
+          bash -n ./features/default/scripts/stow-home-files
+        expect_pass "contract: Stow Rulesy" ./tests/stow-rulesy-contract.sh .
         expect_pass "syntax: features/hostname/apply" bash -n ./features/hostname/apply
         expect_pass "syntax: features/hostname/desired-hostname" \
           bash -n ./features/hostname/desired-hostname
@@ -305,6 +316,9 @@ run_case() {
         seed_rulesy "${HOME}"
         expect_pass "syntax: install.sh" bash -n ./install.sh
         expect_pass "syntax: features/default/apply" bash -n ./features/default/apply
+        expect_pass "syntax: shared home-files helper" \
+          bash -n ./features/default/scripts/stow-home-files
+        expect_pass "contract: Stow Rulesy" ./tests/stow-rulesy-contract.sh .
         expect_pass "syntax: features/hostname/apply" bash -n ./features/hostname/apply
         expect_pass "syntax: features/hostname/desired-hostname" \
           bash -n ./features/hostname/desired-hostname

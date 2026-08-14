@@ -1,0 +1,222 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+log() {
+  printf '[stow-home-files] %s\n' "$*"
+}
+
+fail() {
+  log "$*" >&2
+  return 1
+}
+
+if [[ -z "${HOME:-}" ]]; then
+  fail "HOME is not set; refusing to manage an unknown target directory."
+  exit 1
+fi
+
+if [[ ! -d "${HOME}" ]]; then
+  fail "HOME is set to '${HOME}', but that directory does not exist."
+  exit 1
+fi
+
+FEATURE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+REPO_ROOT="$(cd "${FEATURE_ROOT}/../.." && pwd -P)"
+HOME_PACKAGE_PATH="${REPO_ROOT}/home"
+MARKER_PATH="${HOME}/managed_by_dofiles.md"
+CURRENT_MARKER_PATH="${HOME_PACKAGE_PATH}/managed_by_dofiles.md"
+CODEX_TARGET_PATH="${HOME}/.codex/config.toml"
+STOW_VERBOSITY="${STOW_VERBOSITY:-${VERBOCITY:-}}"
+
+if [[ ! -d "${HOME_PACKAGE_PATH}" ]]; then
+  fail "Expected home package directory '${HOME_PACKAGE_PATH}' does not exist."
+  exit 1
+fi
+
+if ! command -v stow >/dev/null 2>&1; then
+  fail "GNU Stow is not installed. Run '${HOME}/.dof/bin/dof apply' to install it."
+  exit 1
+fi
+
+resolve_link_target() {
+  local link_path="$1"
+  local link_target
+  local candidate
+  local candidate_dir
+
+  link_target="$(readlink "${link_path}")"
+  if [[ "${link_target}" = /* ]]; then
+    candidate="${link_target}"
+  else
+    candidate="$(dirname "${link_path}")/${link_target}"
+  fi
+
+  candidate_dir="$(cd -P "$(dirname "${candidate}")" 2>/dev/null && pwd)" || return 1
+  printf '%s/%s\n' "${candidate_dir}" "$(basename "${candidate}")"
+}
+
+canonical_leaf_path() {
+  local path="$1"
+  local path_dir
+
+  path_dir="$(cd -P "$(dirname "${path}")" 2>/dev/null && pwd)" || return 1
+  printf '%s/%s\n' "${path_dir}" "$(basename "${path}")"
+}
+
+validate_marker_ownership() {
+  local current_marker
+  local installed_marker
+  local legacy_root
+
+  if [[ ! -L "${MARKER_PATH}" ]]; then
+    return
+  fi
+
+  installed_marker="$(resolve_link_target "${MARKER_PATH}")" || {
+    fail "CRITICAL: Cannot resolve marker link '${MARKER_PATH}'; refusing to alter it."
+    return 1
+  }
+  current_marker="$(canonical_leaf_path "${CURRENT_MARKER_PATH}")" || {
+    fail "CRITICAL: Cannot resolve the active workspace marker '${CURRENT_MARKER_PATH}'."
+    return 1
+  }
+
+  if [[ "${installed_marker}" == "${current_marker}" ]]; then
+    return
+  fi
+
+  if [[ "${installed_marker}" != */home/managed_by_dofiles.md ]]; then
+    fail "CRITICAL: Marker '${MARKER_PATH}' points outside a recognizable dotfiles checkout: '${installed_marker}'."
+    fail "Remove or migrate that link manually before retrying dof apply."
+    return 1
+  fi
+
+  legacy_root="${installed_marker%/home/managed_by_dofiles.md}"
+  if [[ "${legacy_root}" == "${REPO_ROOT}" || ! -d "${legacy_root}/home" || ! -f "${installed_marker}" ]]; then
+    fail "CRITICAL: Legacy checkout '${legacy_root}' is incomplete or ambiguous; refusing automatic handoff."
+    return 1
+  fi
+}
+
+handoff_legacy_checkout() {
+  local current_marker
+  local installed_marker
+  local legacy_codex_source
+  local legacy_root
+  local installed_codex_source=""
+
+  if [[ ! -L "${MARKER_PATH}" ]]; then
+    return
+  fi
+
+  validate_marker_ownership
+  installed_marker="$(resolve_link_target "${MARKER_PATH}")"
+  current_marker="$(canonical_leaf_path "${CURRENT_MARKER_PATH}")"
+
+  if [[ "${installed_marker}" == "${current_marker}" ]]; then
+    return
+  fi
+
+  legacy_root="${installed_marker%/home/managed_by_dofiles.md}"
+  log "Handing off links from legacy checkout '${legacy_root}'."
+  stow \
+    "--verbose=${STOW_VERBOSITY:-1}" \
+    --delete \
+    --dir "${legacy_root}" \
+    --target "${HOME}" \
+    home
+
+  if [[ -L "${CODEX_TARGET_PATH}" ]]; then
+    installed_codex_source="$(resolve_link_target "${CODEX_TARGET_PATH}" || true)"
+    legacy_codex_source="${legacy_root}/home/.codex/config.toml"
+    if [[ "${installed_codex_source}" == "${legacy_codex_source}" ]]; then
+      rm "${CODEX_TARGET_PATH}"
+      log "Removed legacy Codex config link: ${CODEX_TARGET_PATH}"
+    fi
+  fi
+}
+
+check_home_files() {
+  local action_output
+  local output
+  local status
+
+  validate_marker_ownership
+
+  set +e
+  output="$(
+    stow \
+      "--verbose=${STOW_VERBOSITY:-1}" \
+      --simulate \
+      --stow \
+      --dir "${REPO_ROOT}" \
+      --target "${HOME}" \
+      home 2>&1
+  )"
+  status="$?"
+  set -e
+
+  if [[ -n "${output}" ]]; then
+    while IFS= read -r line; do
+      printf '[stow] %s\n' "${line}"
+    done <<<"${output}"
+  fi
+
+  if [[ "${status}" -ne 0 ]]; then
+    fail "GNU Stow reported an error while checking the home package."
+    return "${status}"
+  fi
+
+  action_output="$(
+    printf '%s\n' "${output}" |
+      awk '$0 != "WARNING: in simulation mode so not modifying filesystem."'
+  )"
+  if [[ -n "${action_output}" ]]; then
+    fail "Home files are not fully linked; the simulation above shows pending changes."
+    return 1
+  fi
+
+  log "Home files are linked from '${HOME_PACKAGE_PATH}'."
+}
+
+apply_home_files() {
+  handoff_legacy_checkout
+  log "Reconciling '${HOME_PACKAGE_PATH}' into '${HOME}'."
+  stow \
+    "--verbose=${STOW_VERBOSITY:-1}" \
+    --restow \
+    --dir "${REPO_ROOT}" \
+    --target "${HOME}" \
+    home
+}
+
+uninstall_home_files() {
+  log "Removing links owned by '${HOME_PACKAGE_PATH}' from '${HOME}'."
+  stow \
+    "--verbose=${STOW_VERBOSITY:-2}" \
+    --delete \
+    --dir "${REPO_ROOT}" \
+    --target "${HOME}" \
+    home
+}
+
+if [[ "$#" -ne 1 ]]; then
+  fail "Usage: $0 check|apply|uninstall"
+  exit 2
+fi
+
+case "$1" in
+  check)
+    check_home_files
+    ;;
+  apply)
+    apply_home_files
+    ;;
+  uninstall)
+    uninstall_home_files
+    ;;
+  *)
+    fail "Unknown operation '$1'; expected check, apply, or uninstall."
+    exit 2
+    ;;
+esac

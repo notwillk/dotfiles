@@ -1,6 +1,6 @@
 FROM alpine:3.20
 
-RUN apk add --no-cache bash stow \
+RUN apk add --no-cache bash gnupg stow \
   && mkdir -p /opt/test-stow \
   && cp "$(command -v stow)" /opt/test-stow/stow \
   && rm -f "$(command -v stow)"

@@ -18,15 +18,11 @@ trap on_exit EXIT
 prepend() {
   local prefix="$1"; shift
 
-  # pick strategy
   if command -v stdbuf >/dev/null 2>&1; then
-    # Linux: force line buffering
     stdbuf -oL -eL "$@" 2>&1 | awk -v p="$prefix" '{ print p " " $0; fflush(); }'
   elif command -v script >/dev/null 2>&1; then
-    # cross-platform fallback (macOS, etc.)
     script -q /dev/null "$@" 2>&1 | awk -v p="$prefix" '{ print p " " $0; fflush(); }'
   else
-    # last resort (no buffering guarantees)
     "$@" 2>&1 | awk -v p="$prefix" '{ print p " " $0; fflush(); }'
   fi
 }
@@ -67,18 +63,18 @@ fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FEATURE_ROOT="${REPO_ROOT}/features/default"
-DOTFILES_SOURCE_PATH="${REPO_ROOT}/home"
+HOME_PAYLOAD_PATH="${REPO_ROOT}/home"
 INITIAL_FILES_SOURCE_PATH="${REPO_ROOT}/initial-files"
 DOTFILES_STATE_PATH="${HOME}/.dotfiles"
 BACKUP_PATH="${DOTFILES_STATE_PATH}/backups"
-CODEX_SOURCE_PATH="${DOTFILES_SOURCE_PATH}/.codex"
+CODEX_SOURCE_PATH="${HOME_PAYLOAD_PATH}/.codex"
 CODEX_TARGET_PATH="${HOME}/.codex"
 RULESY_BIN="${HOME}/bin/rulesy"
 DOF_RULESY_BIN="${HOME}/.dof/bin/rulesy"
 RULESY_INSTALL_URL="https://raw.githubusercontent.com/notwillk/rulesy/main/scripts/install.sh"
 
-if [[ ! -d "${DOTFILES_SOURCE_PATH}" ]]; then
-  log "Expected Stow package directory '${DOTFILES_SOURCE_PATH}' does not exist." >&2
+if [[ ! -d "${HOME_PAYLOAD_PATH}" ]]; then
+  log "Expected home payload directory '${HOME_PAYLOAD_PATH}' does not exist." >&2
   exit 1
 fi
 
@@ -220,93 +216,6 @@ copy_initial_files() {
   done < <(find "${INITIAL_FILES_SOURCE_PATH}" -type f -print0 | sort -z)
 }
 
-if command -v stow >/dev/null 2>&1; then
-  log "GNU Stow is installed: $(command -v stow)"
-else
-  SUDO=()
-
-  require_sudo() {
-    if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
-      SUDO=()
-    elif command -v sudo >/dev/null 2>&1; then
-      SUDO=(sudo)
-    else
-      log "GNU Stow is not installed, and sudo is unavailable." >&2
-      log "Please install GNU Stow manually or run this script as root." >&2
-      exit 1
-    fi
-  }
-
-  install_with() {
-    local manager="$1"
-
-    log "GNU Stow is not installed. Installing with ${manager}..."
-
-    case "${manager}" in
-      brew)
-        brew install stow
-        ;;
-      apt-get)
-        require_sudo
-        "${SUDO[@]}" apt-get update
-        "${SUDO[@]}" apt-get install -y stow
-        ;;
-      apt)
-        require_sudo
-        "${SUDO[@]}" apt update
-        "${SUDO[@]}" apt install -y stow
-        ;;
-      dnf)
-        require_sudo
-        "${SUDO[@]}" dnf install -y stow
-        ;;
-      yum)
-        require_sudo
-        "${SUDO[@]}" yum install -y stow
-        ;;
-      pacman)
-        require_sudo
-        "${SUDO[@]}" pacman -Sy --noconfirm stow
-        ;;
-      zypper)
-        require_sudo
-        "${SUDO[@]}" zypper --non-interactive install stow
-        ;;
-      apk)
-        require_sudo
-        "${SUDO[@]}" apk add stow
-        ;;
-      xbps-install)
-        require_sudo
-        "${SUDO[@]}" xbps-install -Sy stow
-        ;;
-      pkg)
-        require_sudo
-        "${SUDO[@]}" pkg install -y stow
-        ;;
-      *)
-        log "Unsupported package manager: ${manager}" >&2
-        exit 1
-        ;;
-    esac
-  }
-
-  for manager in brew apt-get apt dnf yum pacman zypper apk xbps-install pkg; do
-    if command -v "${manager}" >/dev/null 2>&1; then
-      install_with "${manager}"
-      break
-    fi
-  done
-
-  if ! command -v stow >/dev/null 2>&1; then
-    log "Failed to install GNU Stow." >&2
-    log "Supported managers: brew, apt-get, apt, dnf, yum, pacman, zypper, apk, xbps-install, pkg." >&2
-    exit 1
-  fi
-
-  log "GNU Stow installed: $(command -v stow)"
-fi
-
 install_rulesy
 install_rulesy_for_dof
 
@@ -315,97 +224,11 @@ install_rulesy_for_dof
   check \
   --fix
 
-resolve_link_target() {
-  local link_path="$1"
-  local link_target
-  local candidate
-  local candidate_dir
-
-  link_target="$(readlink "${link_path}")"
-  if [[ "${link_target}" = /* ]]; then
-    candidate="${link_target}"
-  else
-    candidate="$(dirname "${link_path}")/${link_target}"
-  fi
-
-  candidate_dir="$(cd -P "$(dirname "${candidate}")" 2>/dev/null && pwd)" || return 1
-  printf '%s/%s\n' "${candidate_dir}" "$(basename "${candidate}")"
-}
-
-handoff_legacy_checkout() {
-  local marker="${HOME}/managed_by_dofiles.md"
-  local current_marker="${DOTFILES_SOURCE_PATH}/managed_by_dofiles.md"
-  local legacy_marker
-  local legacy_root
-  local legacy_codex_source
-  local codex_target="${CODEX_TARGET_PATH}/config.toml"
-  local codex_source=""
-
-  if [[ ! -L "${marker}" ]]; then
-    return
-  fi
-
-  legacy_marker="$(resolve_link_target "${marker}")" || {
-    log "CRITICAL: Cannot resolve legacy marker link '${marker}'; refusing to alter it." >&2
-    return 1
-  }
-
-  if [[ "${legacy_marker}" == "${current_marker}" ]]; then
-    return
-  fi
-
-  if [[ "${legacy_marker}" != */home/managed_by_dofiles.md ]]; then
-    log "CRITICAL: Marker '${marker}' points outside a recognizable dotfiles checkout: '${legacy_marker}'." >&2
-    log "Remove or migrate that link manually before retrying dof apply." >&2
-    return 1
-  fi
-
-  legacy_root="${legacy_marker%/home/managed_by_dofiles.md}"
-  if [[ ! -d "${legacy_root}/home" || ! -f "${legacy_marker}" ]]; then
-    log "CRITICAL: Legacy checkout '${legacy_root}' is incomplete; refusing automatic handoff." >&2
-    return 1
-  fi
-
-  log "Handing off Stow links from legacy checkout '${legacy_root}'."
-
-  prepend "[stow:legacy]" stow \
-    "--verbose=${STOW_VERBOSITY:-${VERBOCITY:-1}}" \
-    --delete \
-    --dir "${legacy_root}" \
-    --target "${HOME}" \
-    home
-
-  if [[ -L "${codex_target}" ]]; then
-    codex_source="$(resolve_link_target "${codex_target}" || true)"
-    legacy_codex_source="${legacy_root}/home/.codex/config.toml"
-    if [[ "${codex_source}" == "${legacy_codex_source}" ]]; then
-      rm "${codex_target}"
-      log "Removed legacy Codex config link: ${codex_target}"
-    fi
-  fi
-}
-
 GIT_PATH="git@github.com:notwillk/dotfiles.git"
 
-STOW_PACKAGE="${DOTFILES_SOURCE_PATH#"${REPO_ROOT}/"}"
-STOW_VERBOSITY="${STOW_VERBOSITY:-${VERBOCITY:-1}}"
-STOW_COMMAND=(
-  stow
-  "--verbose=${STOW_VERBOSITY}"
-  --restow
-  --dir "${REPO_ROOT}"
-  --target "${HOME}"
-  "${STOW_PACKAGE}"
-)
-
 mkdir -p "${DOTFILES_STATE_PATH}" "${BACKUP_PATH}"
-handoff_legacy_checkout
 copy_initial_files
-log "Linking '${DOTFILES_SOURCE_PATH}' into '${HOME}'..."
-printf -v STOW_COMMAND_DISPLAY "%q " "${STOW_COMMAND[@]}"
-log "Running \`${STOW_COMMAND_DISPLAY% }\`..."
-prepend "[stow]" "${STOW_COMMAND[@]}"
 link_codex_config
-log "Dotfiles successfully linked from the dof workspace."
+log "Dotfiles successfully reconciled from the dof workspace."
 log "Make updates in ${REPO_ROOT} and push them to ${GIT_PATH}."
 log "Uninstall links by running \`${REPO_ROOT}/uninstall.sh\`."

@@ -1,0 +1,7 @@
+rules:
+  - name: Home files are linked from the active dof workspace
+    skip-if: |
+      ! command -v gpg >/dev/null 2>&1 ||
+        ! command -v stow >/dev/null 2>&1
+    check: ./scripts/stow-home-files check
+    fix: ./scripts/stow-home-files apply
