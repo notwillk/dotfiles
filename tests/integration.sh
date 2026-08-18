@@ -345,6 +345,9 @@ UNAME
   cat >"${fake_bin}/ioreg" <<'IOREG'
 #!/bin/sh
 printf '    "product-name" = <"%s">\n' "${FAKE_MARKETING_NAME}"
+if [ "${FAKE_IOREG_PADDING:-0}" = 1 ]; then
+  awk 'BEGIN { for (i = 0; i < 50000; i++) print "padding" }'
+fi
 IOREG
   cat >"${fake_bin}/system_profiler" <<'SYSTEM_PROFILER'
 #!/bin/sh
@@ -352,10 +355,16 @@ printf '      Chip: %s\n' "${FAKE_CHIP_NAME}"
 SYSTEM_PROFILER
   chmod 0755 "${fake_bin}/uname" "${fake_bin}/ioreg" "${fake_bin}/system_profiler"
 
+  [[ "$(grep -c "^    interactive-fix: |$" "${SNAPSHOT}/features/hostname/rulesy.yaml")" -eq 1 ]] ||
+    fail "hostname repair must remain an interactive Rulesy fix"
+  grep -Fqx "      sudo -v" "${SNAPSHOT}/features/hostname/rulesy.yaml" ||
+    fail "hostname repair must authenticate with sudo interactively"
+
   local actual
   actual="$(
     FAKE_MARKETING_NAME='MacBook Pro (14-inch, Nov 2024)' \
       FAKE_CHIP_NAME='Apple M4 Pro' \
+      FAKE_IOREG_PADDING=1 \
       PATH="${fake_bin}:${PATH}" \
       "${SNAPSHOT}/features/hostname/desired-hostname"
   )"

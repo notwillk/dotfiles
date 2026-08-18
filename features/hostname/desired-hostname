@@ -10,7 +10,7 @@ fail() {
 
 marketing_name="$(
   ioreg -l -r -c IOPlatformDevice 2>/dev/null |
-    awk -F '"' '/"product-name"[[:space:]]*=/ { print $4; exit }'
+    awk -F '"' '!found && /"product-name"[[:space:]]*=/ { print $4; found = 1 }'
 )"
 [[ -n "${marketing_name}" ]] || fail "could not determine the Mac marketing model name"
 
